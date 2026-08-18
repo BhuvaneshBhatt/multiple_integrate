@@ -1,0 +1,159 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+
+# ── Project metadata (PEP 621) ────────────────────────────────────────────────
+
+[project]
+name = "multiple-integrate"
+version = "2.0.0"
+description = "Symbolic multiple integration for Python"
+readme = "README.md"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+
+authors = [
+    { name = "Bhuvanesh Bhatt", email = "bhuvaneshbhatt@gmail.com" }
+]
+
+keywords = [
+    "symbolic mathematics",
+    "symbolic computation",
+    "integration",
+    "definite integration",
+    "multiple integrals",
+    "calculus",
+    "sympy",
+    "computer algebra",
+    "layer-cake formula",
+    "co-area formula"
+]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "sympy>=1.12"
+]
+
+
+# ── Optional dependency groups ────────────────────────────────────────────────
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8",
+    "pytest-timeout>=2.2",
+]
+dev = [
+    "pytest>=8",
+    "pytest-timeout>=2.2",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+release = [
+    "build>=1.2",
+    "twine>=6",
+]
+notebook = [
+    "jupyter>=1.0",
+    "notebook>=7.0",
+    "ipykernel>=6.0",
+    "matplotlib>=3.7",
+]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.7",
+]
+all = [
+    "pytest>=8",
+    "pytest-timeout>=2.2",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "jupyter>=1.0",
+    "notebook>=7.0",
+    "ipykernel>=6.0",
+    "matplotlib>=3.7",
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.7",
+]
+
+
+# ── Project URLs ──────────────────────────────────────────────────────────────
+
+[project.urls]
+"Homepage"      = "https://github.com/BhuvaneshBhatt/multiple_integrate"
+"Documentation" = "https://BhuvaneshBhatt.github.io/multiple_integrate"
+"Source"        = "https://github.com/BhuvaneshBhatt/multiple_integrate"
+"Issue Tracker" = "https://github.com/BhuvaneshBhatt/multiple_integrate/issues"
+"Changelog"     = "https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/changelog.md"
+
+
+# ── Hatchling build ───────────────────────────────────────────────────────────
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/multiple_integrate"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/multiple_integrate/",
+    "tests/",
+    "notebooks/",
+    "docs/",
+    "README.md",
+    "pyproject.toml",
+    "LICENSE"
+]
+
+
+# ── pytest ────────────────────────────────────────────────────────────────────
+
+[tool.pytest.ini_options]
+testpaths   = ["tests"]
+addopts     = "-v --tb=short"
+timeout     = 120
+markers = [
+    "slow: marks tests as slow (deselect with -m 'not slow')"
+]
+
+
+# ── ruff ──────────────────────────────────────────────────────────────────────
+
+[tool.ruff]
+src            = ["src"]
+line-length    = 100
+target-version = "py310"
+exclude        = [".git", ".venv", ".pytest_cache", ".ruff_cache", "build", "dist", "notebooks"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501", "B007"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["multiple_integrate"]
+
+
+# ── mypy ──────────────────────────────────────────────────────────────────────
+
+[tool.mypy]
+mypy_path              = "src"
+packages               = ["multiple_integrate"]
+python_version         = "3.10"
+strict                 = false
+warn_unused_configs    = true
+warn_return_any        = false
+ignore_missing_imports = true
