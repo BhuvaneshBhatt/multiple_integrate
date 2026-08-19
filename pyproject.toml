@@ -12,7 +12,7 @@ description = "Symbolic multiple integration for Python"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 
 authors = [
     { name = "Bhuvanesh Bhatt", email = "bhuvaneshbhatt@gmail.com" }
