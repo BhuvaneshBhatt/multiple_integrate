@@ -1,6 +1,6 @@
 # API Reference
 
-This page documents the public API and the main internal data structures used by the current `src/multiple_integrate/` package.
+This page documents the public API and the main internal data structures used by `src/multiple_integrate/`.
 
 ---
 
@@ -13,7 +13,6 @@ def multiple_integrate(
     f: sympy.Expr,
     *ranges,
     assumptions=None,
-    generate_conditions: bool = False,
     principal_value: bool = False,
 ) -> sympy.Expr
 ```
@@ -26,9 +25,8 @@ Symbolically evaluate a definite or multiple integral.
 |---|---|---|
 | `f` | `sympy.Expr` | Integrand as a SymPy expression. |
 | `*ranges` | `tuple(symbol, lower, upper)` | Integration ranges in **inner-first iterated order**, matching `sympy.integrate`. |
-| `assumptions` | `dict`, optional | Extra assumptions forwarded to selected SymPy calls. |
-| `generate_conditions` | `bool` | Request conditional output from SymPy in supported fallback calls. |
-| `principal_value` | `bool` | Request Cauchy principal value in supported fallback calls. |
+| `assumptions` | SymPy Boolean condition or iterable, optional | Mathematical assumptions such as `a > 0`, `{a > 0, b != 0}`, or `{Q.positive(a)}`. Conditions are normalized to SymPy predicates and used by convergence checks and symbolic refinement. |
+| `principal_value` | `bool` | Request a one-dimensional Cauchy principal value. Multidimensional principal values are currently rejected explicitly. |
 
 **Returns**
 
@@ -38,7 +36,8 @@ A `sympy.Expr`. On some unsupported inputs the result may remain an unevaluated 
 
 - The first range tuple is the **innermost** integral.
 - The solver may use region-aware exact formulas, coordinate changes, symmetry reductions, decomposition-based methods, or raw SymPy fallback.
-- The package performs some structured-path safety checks, but it does **not** attempt complete general convergence analysis for arbitrary integrals.
+- Symmetry shortcuts are disabled when an interior singularity may make ordinary and principal-value integration differ.
+- The package still does **not** attempt complete general convergence analysis for arbitrary multidimensional integrals.
 
 **Example**
 
@@ -109,26 +108,12 @@ These live in `src/multiple_integrate/regions.py`.
 
 ---
 
-## Decomposition support
+## Internal decomposition support
 
-### `Decomposition`
+The composition-analysis helper is internal. ``_IntegrandDecomposition`` stores
+``f_outer``, ``g_inner``, and ``is_polynomial`` for strategy dispatch, but it is
+not exported from ``multiple_integrate`` and is not part of the public API.
 
-```python
-class Decomposition:
-    f_outer: Callable
-    g_inner: sympy.Expr
-    is_polynomial: bool
-```
-
-A lightweight container describing an integrand decomposition of the form
-
-\[
-F(x_1,\dots,x_n) = f(g(x_1,\dots,x_n)).
-\]
-
-This still matters internally for several non-region-specific heuristics, but it is no longer the only organizing idea in the solver.
-
----
 
 ## Coordinate transforms
 
@@ -164,10 +149,10 @@ This is currently used for selected coordinate changes such as:
 Contains:
 
 - `multiple_integrate`
-- `Decomposition`
+- `_IntegrandDecomposition` (internal)
 - `CoordinateTransform`
 - decomposition helpers
-- planner / fallback logic
+- method selection and iterated fallback
 - selected exact family solvers
 
 ### `multiple_integrate.regions`

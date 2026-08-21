@@ -7,7 +7,7 @@ multiple integrals.
 The main public entry point is ``multiple_integrate``.
 """
 
-from multiple_integrate.core import Decomposition, multiple_integrate
+from multiple_integrate.core import clear_cache, multiple_integrate
 from multiple_integrate.regions import (
     AffineSimplexRegion,
     AnnulusRegion,
@@ -27,7 +27,7 @@ from multiple_integrate.regions import (
 
 __all__ = [
     "multiple_integrate",
-    "Decomposition",
+    "clear_cache",
     "Region",
     "AffineSimplexRegion",
     "AnnulusRegion",

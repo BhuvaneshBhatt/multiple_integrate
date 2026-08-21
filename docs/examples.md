@@ -64,13 +64,13 @@ multiple_integrate(x**2 * y, (y, 0, 1-x), (x, 0, 1))         # 1/60
 multiple_integrate(1, (z,0,1-y-x),(y,0,1-x),(x,0,1))         # 1/6
 ```
 
-**Strategy:** S4 (general polynomial Heaviside) for bounded domains.
+**Method:** polynomial level-set integration on a bounded domain.
 
 ---
 
 ## 2. Gaussian / quadratic exponential integrals
 
-### 2.1 Doubly-infinite Gaussians (Strategy 2)
+### 2.1 Doubly-infinite Gaussians
 
 ```python
 # 1-D
@@ -92,7 +92,7 @@ multiple_integrate(exp(-((x-1)**2 + (y+2)**2)),
     (x,-oo,oo),(y,-oo,oo))                                     # π
 ```
 
-### 2.2 Half-space Gaussians (Strategy 3)
+### 2.2 Half-space Gaussians
 
 ```python
 # Half-line
@@ -108,7 +108,7 @@ multiple_integrate(exp(-(x**2+y**2)), (x,-oo,oo),(y,0,oo))   # π/2
 ### 2.3 Weighted Gaussians
 
 ```python
-# ∫_0^∞ x·exp(-x²) dx = 1/2  (not even → S6 handles it)
+# ∫_0^∞ x·exp(-x²) dx = 1/2  (handled by a monotone one-dimensional change of variable)
 multiple_integrate(x * exp(-x**2), (x, 0, oo))                # 1/2
 
 # ∫∫_ℝ² (x²+y²)·exp(-(x²+y²)) dx dy = π
@@ -118,7 +118,7 @@ multiple_integrate((x**2+y**2)*exp(-(x**2+y**2)),
 
 ---
 
-## 3. Linear exponential integrals (Strategy 1)
+## 3. Linear exponential integrals
 
 ```python
 # ∫_0^∞ exp(-2x) dx = 1/2
@@ -135,11 +135,11 @@ multiple_integrate(exp(-(x+y+z)), (x,0,oo),(y,0,oo),(z,0,oo)) # 1
 ```
 
 **Note:** The moment integral $\int_{[0,\infty)^n} (b\cdot x + c)^k f(b\cdot x + c)$
-also routes through S1 since the formula works for any $f$.
+also uses the linear pushforward formula because that formula applies to general outer functions.
 
 ---
 
-## 4. Separable non-polynomial integrands (Strategy 5)
+## 4. Separable non-polynomial integrands
 
 ### 4.1 Additive trig arguments
 
@@ -177,7 +177,7 @@ multiple_integrate(log(x+y), (x,1,E),(y,1,E))                 # sympy result
 
 ---
 
-## 5. Monotone substitution (Strategy 6)
+## 5. Monotone substitution
 
 ### 5.1 Exponential
 
@@ -237,7 +237,7 @@ multiple_integrate(exp(-x), (x, 0, 1), (y, 0, 1))             # 1 - 1/E
 
 ---
 
-## 6. Piecewise-monotone (Strategy 7)
+## 6. Piecewise-monotone substitution
 
 ### 6.1 Trigonometric
 
@@ -387,7 +387,7 @@ multiple_integrate(x+y, (x,0,oo),(y,0,oo))                    # oo
 
 ## 10. Fallback (plain iterated integration)
 
-These use Strategy 9 because they are not of the form $f(g(\mathbf{x}))$.
+These use ordinary iterated integration because they are not of the form $f(g(\mathbf{x}))$.
 
 ```python
 # ∫_0^π x·sin(x) dx = π  (integration by parts)

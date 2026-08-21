@@ -10,12 +10,14 @@ from multiple_integrate import (
 )
 
 
-def test_shifted_disk_not_classified_as_disk():
+def test_shifted_disk_is_now_classified_with_center():
     x, y = sp.symbols("x y", real=True)
     region = region_from_ranges(
         [(x, 0, 2), (y, -sp.sqrt(1 - (x - 1) ** 2), sp.sqrt(1 - (x - 1) ** 2))]
     )
-    assert not isinstance(region, DiskRegion)
+    assert isinstance(region, DiskRegion)
+    assert region.center == (0, 1)
+    assert region.radius == 1
 
 
 def test_annulus_like_bounds_not_classified_as_disk():

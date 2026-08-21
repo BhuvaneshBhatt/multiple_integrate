@@ -242,7 +242,7 @@ class TestMiscReferenceIntegrals:
         ∫∫_{[0,∞)²} exp(-(1+x1+x2)³) dx1 dx2
         = (E₁/₃(1) - E₂/₃(1)) / 3  ≈ 0.01601
 
-        S1 (linear strategy) detects g_work = 1+x1+x2, k=3.
+        The linear pushforward method detects g_work = 1+x1+x2 with k=3.
         """
         result = multiple_integrate(exp(-((1 + x1 + x2) ** 3)), (x1, 0, oo), (x2, 0, oo))
         expected_num = float((expint(Rational(1, 3), 1) - expint(Rational(2, 3), 1)).evalf()) / 3

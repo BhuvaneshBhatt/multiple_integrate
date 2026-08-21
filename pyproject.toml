@@ -7,16 +7,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "multiple-integrate"
-version = "2.0.0"
+version = "2.1.0"
 description = "Symbolic multiple integration for Python"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 
-authors = [
-    { name = "Bhuvanesh Bhatt", email = "bhuvaneshbhatt@gmail.com" }
-]
+authors = [{name = "Bhuvanesh Bhatt", email = "bhuvaneshbhatt@gmail.com"}]
 
 keywords = [
     "symbolic mathematics",
@@ -37,6 +35,7 @@ classifiers = [
     "Intended Audience :: Education",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -73,9 +72,9 @@ notebook = [
     "matplotlib>=3.7",
 ]
 docs = [
-    "mkdocs>=1.5",
-    "mkdocs-material>=9.5",
-    "pymdown-extensions>=10.7",
+    "sphinx>=8,<9",
+    "sphinx-rtd-theme>=3,<4",
+    "myst-parser>=4,<5",
 ]
 all = [
     "pytest>=8",
@@ -86,9 +85,9 @@ all = [
     "notebook>=7.0",
     "ipykernel>=6.0",
     "matplotlib>=3.7",
-    "mkdocs>=1.5",
-    "mkdocs-material>=9.5",
-    "pymdown-extensions>=10.7",
+    "sphinx>=8,<9",
+    "sphinx-rtd-theme>=3,<4",
+    "myst-parser>=4,<5",
 ]
 
 
@@ -96,7 +95,7 @@ all = [
 
 [project.urls]
 "Homepage"      = "https://github.com/BhuvaneshBhatt/multiple_integrate"
-"Documentation" = "https://BhuvaneshBhatt.github.io/multiple_integrate"
+"Documentation" = "https://multiple-integrate.readthedocs.io/"
 "Source"        = "https://github.com/BhuvaneshBhatt/multiple_integrate"
 "Issue Tracker" = "https://github.com/BhuvaneshBhatt/multiple_integrate/issues"
 "Changelog"     = "https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/changelog.md"
@@ -136,7 +135,7 @@ markers = [
 src            = ["src"]
 line-length    = 100
 target-version = "py310"
-exclude        = [".git", ".venv", ".pytest_cache", ".ruff_cache", "build", "dist", "notebooks", "docs", "README.md"]
+exclude        = [".git", ".venv", ".pytest_cache", ".ruff_cache", "build", "dist", "notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B", "SIM"]

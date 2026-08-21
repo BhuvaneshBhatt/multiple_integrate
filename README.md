@@ -67,10 +67,31 @@ So a triangular integral should be written as
 multiple_integrate(1, (y, 0, 1 - x), (x, 0, 1))
 ```
 
-not with the structural outer-to-inner ordering used, for example, by Mathematica. The same convention is used by
-`region_from_ranges(...)` when regions are recognized from dependent bounds.
+not with the structural outer-to-inner ordering used, for example, by Mathematica. The same convention is used by `multiple_integrate`; standalone `region_from_ranges(...)` can also inspect an explicitly requested structural order for geometric classification.
 
 This matters especially for triangular, disk, and ball examples with dependent bounds: write the tuples in the same order you would pass them to `sympy.integrate`.
+
+When bounds contain symbolic parameters, specialized geometric formulas are used only when their orientation can be established from the supplied assumptions. This preserves the signed semantics of iterated integration.
+
+## Assumptions
+
+Parameter assumptions can be supplied with ordinary SymPy relations or ``Q`` predicates:
+
+```python
+import sympy as sp
+from multiple_integrate import multiple_integrate
+
+x, a = sp.symbols("x a", real=True)
+
+multiple_integrate(
+    sp.exp(-a*x),
+    (x, 0, sp.oo),
+    assumptions={a > 0},
+)
+# 1/a
+```
+
+A single condition such as ``assumptions=a > 0`` is also accepted, as are lists, tuples, sets, and SymPy predicates such as ``Q.positive(a)``. Contradictory assumptions raise ``ValueError``.
 
 ---
 
@@ -217,21 +238,25 @@ Here the inner function is `g(x, y) = x + y`. Its level sets in the first quadra
 
 ## Region model
 
-The solver now normalizes input bounds into explicit region objects before applying several structural shortcuts.
+The solver normalizes input bounds into explicit region objects before applying structural shortcuts.
 
-Current region support includes:
+Region support includes:
 
 - `BoxRegion` for product domains with independent bounds
 - `IteratedRegion` for general nested bounds
 - `SimplexRegion` for standard simplex-style regions
 - `AffineSimplexRegion` for affine images of standard simplices
 - `GraphRegion` for simple affine graph-bounded 2D regions
-- `DiskRegion` for standard centered disks
-- `BallRegion` for standard centered balls
-- `EllipsoidRegion` for axis-aligned centered ellipsoids
+- `DiskRegion` for centered or translated axis-aligned disks
+- `BallRegion` for centered or translated axis-aligned balls
+- `EllipsoidRegion` for centered or translated axis-aligned ellipsoids
 - `AnnulusRegion` for centered annuli
 - `SphericalShellRegion` for centered spherical shells
-- `UnionRegion` for finite unions of supported regions
+- `UnionRegion` for finite disjoint unions of supported regions with matching ordered variables
+
+Region constructors validate structural invariants such as distinct SymPy variables, compatible dimensions, nonnegative radii, positive ellipsoid semi-axes, and consistent nested dependencies. `UnionRegion` has additive **disjoint-union** semantics: pieces must share the same ordered variables and be disjoint up to measure-zero boundaries. Obvious overlaps among supported concentric radial pieces are rejected; if symbolic overlap cannot be decided, callers remain responsible for the disjointness claim.
+
+Translated disks, balls, and axis-aligned ellipsoids are recognized directly from shifted Cartesian bounds. Their `center` coordinates are stored in the same order as `region.variables`, and polynomial/radial shortcuts operate relative to that center.
 
 This improves:
 
@@ -277,7 +302,7 @@ However, it is still **not** a full symbolic region engine. In particular, it do
 
 - general geometric region rewriting
 - automatic order reversal for arbitrary dependent bounds
-- a full region algebra comparable to symbolic `Region` objects
+- a full region algebra
 - unrestricted automatic polar/spherical coordinate changes
 - arbitrary semialgebraic cell decomposition
 
@@ -332,6 +357,6 @@ GPL-3.0-or-later
 
 ---
 
-## Current limitations
+## Limitations
 
-Recent additions include exact simplex / Dirichlet formulas and the coordinate-change layer for selected disks, balls, shells, and ellipsoids, butthe package still does **not** attempt completely general geometric rewriting or arbitrary symbolic substitutions. It is best viewed as a recognition-driven exact integrator for structured families.
+The package includes exact simplex / Dirichlet formulas and coordinate changes for selected disks, balls, shells, and ellipsoids, but it does **not** attempt completely general geometric rewriting or arbitrary symbolic substitutions. It is best viewed as a recognition-driven exact integrator for structured families.

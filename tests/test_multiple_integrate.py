@@ -14,15 +14,15 @@ Test dimensions
   are bypassed
 
 Strategy routing (strategies are tried in this order):
-  S1  Linear polynomial          f(b·x + c)          over [0,∞)ⁿ
-  S2  Quadratic doubly-infinite  f(xᵀAx+b·x+c)       over (-∞,∞)ⁿ
-  S3  Quadratic even/half        same, mixed ∞/half-∞, even f∘g
-  S4  General polynomial         Heaviside layer-cake, any poly g
-  S5  Separable                  g = h₁(x₁)+h₂(x₂)+…
-  S6  Monotone substitution      single-variable g, no critical pts
-  S7  Piecewise-monotone         single-variable g, has critical pts
-  S8  General non-poly Heaviside SymPy integrates Θ(y−g) in closed form
-  S9  Fallback                   plain iterated sympy.integrate
+  linear pushforward           f(b·x + c) on the positive orthant
+  full-space quadratic          f(xᵀAx+b·x+c) on all of R^n
+  half-space quadratic          symmetry reductions on mixed full/half spaces
+  polynomial level-set          bounded polynomial inner expressions
+  additive separability         sums of single-variable inner expressions
+  monotone change               one active variable without critical points
+  piecewise-monotone change     one active variable split at critical points
+  general level-set             symbolic pushforward density for general g
+  iterated fallback             ordinary SymPy iterated integration
 
 Running
 ───────
@@ -56,7 +56,7 @@ from multiple_integrate import (
     multiple_integrate,
 )
 from multiple_integrate.core import (
-    _decompose,
+    _decompose_integrand,
 )
 
 x, y, z = symbols("x y z", real=True)
@@ -100,46 +100,46 @@ def assert_diverges(result):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §A  _decompose  –  unit tests for the decomposition layer
+# §A  _decompose_integrand  –  unit tests for the decomposition layer
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestDecompose:
-    """Unit tests for _decompose(); exercises all five detection branches."""
+    """Unit tests for _decompose_integrand(); exercises all five detection branches."""
 
     def test_polynomial_univariate(self):
-        d = _decompose(x**3 + 2 * x, [x])
+        d = _decompose_integrand(x**3 + 2 * x, [x])
         assert d is not None
         assert d.is_polynomial
         assert sym_eq(d.g_inner, x**3 + 2 * x)
 
     def test_polynomial_multivariate(self):
-        d = _decompose(x**2 * y + y**3, [x, y])
+        d = _decompose_integrand(x**2 * y + y**3, [x, y])
         assert d is not None
         assert d.is_polynomial
 
     def test_single_arg_composite_exp(self):
         # exp(x²+y) → f=exp, g=x²+y
-        d = _decompose(exp(x**2 + y), [x, y])
+        d = _decompose_integrand(exp(x**2 + y), [x, y])
         assert d is not None
         assert sym_eq(d.g_inner, x**2 + y)
         assert d.is_polynomial
 
     def test_single_arg_composite_sin(self):
-        d = _decompose(sin(x + y), [x, y])
+        d = _decompose_integrand(sin(x + y), [x, y])
         assert d is not None
         assert sym_eq(d.g_inner, x + y)
 
     def test_single_arg_composite_log(self):
         # log(x) — non-polynomial inner
-        d = _decompose(log(x), [x])
+        d = _decompose_integrand(log(x), [x])
         assert d is not None
         assert not d.is_polynomial
 
     def test_power_constant_exponent(self):
-        # Deep decomposition now peels to the single-variable core g = x.
+        # Composition analysis peels wrappers until the single-variable core g = x.
         expr = (x**2 + 1) ** Rational(3, 2)
-        d = _decompose(expr, [x])
+        d = _decompose_integrand(expr, [x])
         assert d is not None
         assert sym_eq(d.g_inner, x)
         assert sym_eq(d.f_outer(x), expr)
@@ -147,33 +147,33 @@ class TestDecompose:
 
     def test_constant_factor_peeled(self):
         # 3*sin(x) → deep decomposition peels to g = x, f = 3*sin(t)
-        d = _decompose(3 * sin(x), [x])
+        d = _decompose_integrand(3 * sin(x), [x])
         assert d is not None
         assert sym_eq(d.g_inner, x)
         assert sym_eq(d.f_outer(x), 3 * sin(x))
 
     def test_constant_addend_peeled(self):
         # sin(x) + 2 → deep decomposition peels to g = x, f = sin(t)+2
-        d = _decompose(sin(x) + 2, [x])
+        d = _decompose_integrand(sin(x) + 2, [x])
         assert d is not None
         assert sym_eq(d.g_inner, x)
         assert sym_eq(d.f_outer(x), sin(x) + 2)
 
-    def test_nested_power_plus_constant_decomposes_to_single_variable_core(self):
+    def test_nested_power_plus_constant_decompose_integrands_to_single_variable_core(self):
         expr = 1 / (1 + (x**2 + 1) ** 2)
-        d = _decompose(expr, [x])
+        d = _decompose_integrand(expr, [x])
         assert d is not None
         assert sym_eq(d.g_inner, x)
         assert sym_eq(d.f_outer(x), expr)
 
     def test_single_active_variable(self):
         # exp(-x) in variables [x, y] — only x active
-        d = _decompose(exp(-x), [x, y])
+        d = _decompose_integrand(exp(-x), [x, y])
         assert d is not None
 
     def test_undecomposable_returns_none(self):
         # sin(x)*cos(y) mixes two variables and is not a single f(g)
-        d = _decompose(sin(x) * cos(y), [x, y])
+        d = _decompose_integrand(sin(x) * cos(y), [x, y])
         # May succeed via constant-factor peeling on one var; if it returns
         # something, ensure calling f_outer(g_inner) reconstructs the expr.
         if d is not None:
@@ -182,44 +182,44 @@ class TestDecompose:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §B  Strategy 1 – Linear polynomial  f(b·x + c) over [0,∞)ⁿ
+# Linear pushforward over the positive orthant
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy1Linear:
     """
-    S1 fires when: is_poly, all ranges [0,∞), A=0 (purely linear g).
+    linear pushforward fires when: is_poly, all ranges [0,∞), A=0 (purely linear g).
     Formula: ∫_{[0,∞)^n} f(b·x+c) dx = 1/(∏bᵢ·(n-1)!) ∫_c^∞ (y-c)^{n-1} f(y) dy
     """
 
     def test_1d_linear_exp(self):
         # ∫_0^∞ exp(-(2x+1)) dx = exp(-1)/2
         result = multiple_integrate(exp(-(2 * x + 1)), (x, 0, oo))
-        assert_eq(result, exp(-1) / 2, "S1: 1-D linear exp")
+        assert_eq(result, exp(-1) / 2, "linear pushforward: 1-D linear exp")
 
     def test_2d_linear_exp(self):
         # ∫_0^∞∫_0^∞ exp(-(x+y)) dx dy  = 1
         # g = x+y, b=(1,1), c=0
         # formula: 1/(1·1·1!) ∫_0^∞ y·exp(-y) dy = Γ(2) = 1
         result = multiple_integrate(exp(-(x + y)), (x, 0, oo), (y, 0, oo))
-        assert_eq(result, Integer(1), "S1: 2-D linear exp")
+        assert_eq(result, Integer(1), "linear pushforward: 2-D linear exp")
 
     def test_2d_linear_polynomial_f(self):
         # ∫_0^∞∫_0^∞ (x+y)·exp(-(x+y)) dx dy
         # = 1/(1·1·1!) ∫_0^∞ t·t·exp(-t) dt = ∫_0^∞ t²·exp(-t) dt = Γ(3) = 2
         result = multiple_integrate((x + y) * exp(-(x + y)), (x, 0, oo), (y, 0, oo))
-        assert_eq(result, Integer(2), "S1: 2-D linear with t*exp")
+        assert_eq(result, Integer(2), "linear pushforward: 2-D linear with t*exp")
 
     def test_3d_linear_exp(self):
         # ∫_{[0,∞)^3} exp(-(x+y+z)) dV = 1
         result = multiple_integrate(exp(-(x + y + z)), (x, 0, oo), (y, 0, oo), (z, 0, oo))
-        assert_eq(result, Integer(1), "S1: 3-D linear exp")
+        assert_eq(result, Integer(1), "linear pushforward: 3-D linear exp")
 
     def test_s1_does_not_fire_on_bounded_domain(self):
-        # Same linear g but over [0,1] — S1 must not fire; result still correct
+        # Same linear g but over [0,1] — linear pushforward must not fire; result still correct
         result = multiple_integrate(exp(-(x + y)), (x, 0, 1), (y, 0, 1))
         expected = (1 - exp(-1)) ** 2
-        assert_eq(result, expected, "S1 bypass: bounded domain")
+        assert_eq(result, expected, "linear pushforward bypass: bounded domain")
 
     # ── Analytic properties ───────────────────────────────────────────────────
     def test_analytic_f_on_linear_g(self):
@@ -231,40 +231,40 @@ class TestStrategy1Linear:
     def test_linear_with_nonunit_coefficients(self):
         # ∫_0^∞∫_0^∞ exp(-(3x + 2y)) dx dy = 1/(3·2) = 1/6
         result = multiple_integrate(exp(-(3 * x + 2 * y)), (x, 0, oo), (y, 0, oo))
-        assert_eq(result, Rational(1, 6), "S1: non-unit b coefficients")
+        assert_eq(result, Rational(1, 6), "linear pushforward: non-unit b coefficients")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §C  Strategy 2 – Quadratic doubly-infinite
+# Quadratic full-space integrals
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy2QuadraticInfinite:
     """
-    S2 fires when: is_poly, all ranges (-∞,∞), A positive definite.
+    full-space quadratic fires when: is_poly, all ranges (-∞,∞), A positive definite.
     """
 
     def test_gaussian_2d(self):
         # ∫∫_ℝ² exp(-(x²+y²)) = π
         result = multiple_integrate(exp(-(x**2 + y**2)), (x, -oo, oo), (y, -oo, oo))
-        assert_eq(result, pi, "S2: 2-D Gaussian")
+        assert_eq(result, pi, "full-space quadratic: 2-D Gaussian")
 
     def test_gaussian_3d(self):
         # ∫∫∫_ℝ³ exp(-(x²+y²+z²)) = π^(3/2)
         result = multiple_integrate(
             exp(-(x**2 + y**2 + z**2)), (x, -oo, oo), (y, -oo, oo), (z, -oo, oo)
         )
-        assert_eq(result, pi ** Rational(3, 2), "S2: 3-D Gaussian")
+        assert_eq(result, pi ** Rational(3, 2), "full-space quadratic: 3-D Gaussian")
 
     def test_gaussian_with_shift(self):
         # ∫∫_ℝ² exp(-((x-1)²+(y+2)²)) = π  (shift doesn't change value)
         result = multiple_integrate(exp(-((x - 1) ** 2 + (y + 2) ** 2)), (x, -oo, oo), (y, -oo, oo))
-        assert_eq(result, pi, "S2: 2-D Gaussian with shift")
+        assert_eq(result, pi, "full-space quadratic: 2-D Gaussian with shift")
 
     def test_anisotropic_gaussian(self):
         # ∫∫_ℝ² exp(-(2x²+3y²)) = π/√6
         result = multiple_integrate(exp(-(2 * x**2 + 3 * y**2)), (x, -oo, oo), (y, -oo, oo))
-        assert_eq(result, pi / sqrt(6), "S2: anisotropic Gaussian")
+        assert_eq(result, pi / sqrt(6), "full-space quadratic: anisotropic Gaussian")
 
     def test_quadratic_diverges_wrong_sign(self):
         # ∫∫_ℝ² exp(x²+y²) diverges (A negative definite)
@@ -279,61 +279,63 @@ class TestStrategy2QuadraticInfinite:
         result = multiple_integrate((x**2 + y**2) * exp(-(x**2 + y**2)), (x, -oo, oo), (y, -oo, oo))
         # Direct: ∫∫ x²·e^(-x²-y²) = √π/2 · √π = π/2, times 2 vars = π
         # plus same for y² → total π
-        assert_eq(result, pi, "S2: poly f of quadratic g")
+        assert_eq(result, pi, "full-space quadratic: poly f of quadratic g")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §D  Strategy 3 – Quadratic even / half-infinite
+# Quadratic half-space symmetry
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy3QuadraticEvenHalf:
     """
-    S3 fires when: is_poly, mix of (-∞,∞) and [0,∞) ranges,
+    half-space quadratic fires when: is_poly, mix of (-∞,∞) and [0,∞) ranges,
     f∘g is even in every half-infinite variable.
     """
 
     def test_half_gaussian_1d(self):
         # ∫_0^∞ exp(-x²) dx = √π/2
         result = multiple_integrate(exp(-(x**2)), (x, 0, oo))
-        assert_eq(result, sqrt(pi) / 2, "S3: half-Gaussian 1-D")
+        assert_eq(result, sqrt(pi) / 2, "half-space quadratic: half-Gaussian 1-D")
 
     def test_half_gaussian_2d_both_half(self):
         # ∫_0^∞∫_0^∞ exp(-(x²+y²)) dx dy = π/4
         result = multiple_integrate(exp(-(x**2 + y**2)), (x, 0, oo), (y, 0, oo))
-        assert_eq(result, pi / 4, "S3: quarter-plane Gaussian")
+        assert_eq(result, pi / 4, "half-space quadratic: quarter-plane Gaussian")
 
     def test_mixed_half_full(self):
         # ∫_{-∞}^{∞}∫_0^{∞} exp(-(x²+y²)) dy dx = π/2
         result = multiple_integrate(exp(-(x**2 + y**2)), (x, -oo, oo), (y, 0, oo))
-        assert_eq(result, pi / 2, "S3: one full + one half Gaussian")
+        assert_eq(result, pi / 2, "half-space quadratic: one full + one half Gaussian")
 
     def test_s3_requires_even(self):
-        # ∫_0^∞ x·exp(-x²) dx = 1/2  — NOT even in x; S3 bypassed, S6 handles
+        # ∫_0^∞ x·exp(-x²) dx = 1/2  — NOT even in x; half-space quadratic bypassed, monotone change handles
         result = multiple_integrate(x * exp(-(x**2)), (x, 0, oo))
-        assert_eq(result, Rational(1, 2), "S3 bypass → S6: x·exp(-x²)")
+        assert_eq(
+            result, Rational(1, 2), "half-space quadratic bypass → monotone change: x·exp(-x²)"
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §E  Strategy 4 – General polynomial Heaviside layer-cake
+# Polynomial Heaviside level-set integration
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy4GeneralPolynomial:
     """
-    S4 fires for polynomial g that doesn't fit S1/S2/S3:
+    polynomial level-set fires for polynomial g that doesn't fit linear pushforward/full-space quadratic/half-space quadratic:
     bounded domains, higher-degree polynomials, asymmetric ranges.
     """
 
     def test_cubic_on_unit_interval(self):
         # ∫_0^1 x³ dx = 1/4
         result = multiple_integrate(x**3, (x, 0, 1))
-        assert_eq(result, Rational(1, 4), "S4: x³ [0,1]")
+        assert_eq(result, Rational(1, 4), "polynomial level-set: x³ [0,1]")
 
     def test_double_polynomial_unit_square(self):
         # ∫∫_{[0,1]²} x²·y dx dy = 1/6
         result = multiple_integrate(x**2 * y, (x, 0, 1), (y, 0, 1))
-        assert_eq(result, Rational(1, 6), "S4: x²y unit square")
+        assert_eq(result, Rational(1, 6), "polynomial level-set: x²y unit square")
 
     def test_poly_f_of_poly_g_bounded(self):
         # ∫∫_{[0,1]²} (x+y)³ dx dy
@@ -345,96 +347,98 @@ class TestStrategy4GeneralPolynomial:
         # Let's just compute it directly and verify
         direct = integrate(integrate((x + y) ** 3, (x, 0, 1)), (y, 0, 1))
         result = multiple_integrate((x + y) ** 3, (x, 0, 1), (y, 0, 1))
-        assert_eq(result, direct, "S4: (x+y)³ unit square")
+        assert_eq(result, direct, "polynomial level-set: (x+y)³ unit square")
 
     def test_triangle_domain(self):
         # ∫∫ x²y over {0≤y≤1-x, 0≤x≤1} = 1/60
         result = multiple_integrate(x**2 * y, (y, 0, 1 - x), (x, 0, 1))
-        assert_eq(result, Rational(1, 60), "S4: x²y on triangle")
+        assert_eq(result, Rational(1, 60), "polynomial level-set: x²y on triangle")
 
     def test_higher_degree_poly(self):
         # ∫_0^1 x⁵ dx = 1/6
         result = multiple_integrate(x**5, (x, 0, 1))
-        assert_eq(result, Rational(1, 6), "S4: x⁵")
+        assert_eq(result, Rational(1, 6), "polynomial level-set: x⁵")
 
     def test_triple_integral_polynomial(self):
         # ∫∫∫_{[0,1]³} xyz dx dy dz = 1/8
         result = multiple_integrate(x * y * z, (x, 0, 1), (y, 0, 1), (z, 0, 1))
-        assert_eq(result, Rational(1, 8), "S4: xyz unit cube")
+        assert_eq(result, Rational(1, 8), "polynomial level-set: xyz unit cube")
 
     # ── Non-analytic f with polynomial g ─────────────────────────────────────
     def test_abs_of_linear_polynomial(self):
         # ∫_{-1}^{1} |x| dx = 1  (|·| is non-analytic at 0)
         result = multiple_integrate(Abs(x), (x, -1, 1))
-        assert_eq(result, Integer(1), "S4/S7: |x| on [-1,1]")
+        assert_eq(
+            result, Integer(1), "polynomial level-set/piecewise-monotone change: |x| on [-1,1]"
+        )
 
     def test_sign_function_polynomial_g(self):
         # ∫_{-1}^{1} sign(x) dx = 0  (sign is discontinuous at 0)
         result = multiple_integrate(sign(x), (x, -1, 1))
-        assert_eq(result, Integer(0), "S4/S9: sign(x) on [-1,1]")
+        assert_eq(result, Integer(0), "polynomial level-set/iterated fallback: sign(x) on [-1,1]")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §F  Strategy 5 – Separable  g = h₁(x₁) + h₂(x₂) + …
+# Additively separable inner expressions
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy5Separable:
     """
-    S5 fires when g is a sum of single-variable non-polynomial terms.
+    additive separability fires when g is a sum of single-variable non-polynomial terms.
     The density of g is the convolution of marginal densities.
     """
 
     def test_sum_of_exponentials(self):
         # ∫_0^∞∫_0^∞ exp(-(x+y)) dx dy = 1
-        # g = x+y  (linear, so S1 would fire first — use f=identity to test S5)
-        # Use a non-linear h to force S5: ∫_0^1∫_0^1 (sin(x)+sin(y))² dx dy
+        # g = x+y  (linear, so linear pushforward would fire first — use f=identity to test additive separability)
+        # Use a non-linear h to force additive separability: ∫_0^1∫_0^1 (sin(x)+sin(y))² dx dy
         # = ∫_0^1∫_0^1 sin²x + 2sinx·siny + sin²y dx dy
         # = 2∫_0^1 sin²x dx · 1 + 2(∫_0^1 sinx dx)²
         # = 2·(1/2 - sin(2)/4) + 2·(1-cos(1))² ... let sympy compute
         expected = integrate(integrate((sin(x) + sin(y)) ** 2, (x, 0, 1)), (y, 0, 1))
         result = multiple_integrate((sin(x) + sin(y)) ** 2, (x, 0, 1), (y, 0, 1))
-        assert_eq(result, expected, "S5: (sin(x)+sin(y))² separable sum")
+        assert_eq(result, expected, "additive separability: (sin(x)+sin(y))² separable sum")
 
     def test_separable_cos_sum(self):
         # ∫∫_{[0,π]²} cos(x+y) dx dy = -4
         result = multiple_integrate(cos(x + y), (x, 0, pi), (y, 0, pi))
-        assert_eq(result, Integer(-4), "S5: cos(x+y)")
+        assert_eq(result, Integer(-4), "additive separability: cos(x+y)")
 
     def test_separable_exp_sum_infinite(self):
         # ∫_0^∞∫_0^∞ exp(-(x+y)) dx dy = 1  (separable g = x+y)
         result = multiple_integrate(exp(-(x + y)), (x, 0, oo), (y, 0, oo))
-        assert_eq(result, Integer(1), "S5: exp(-(x+y))")
+        assert_eq(result, Integer(1), "additive separability: exp(-(x+y))")
 
     def test_separable_three_variables(self):
         # ∫∫∫_{[0,1]³} sin(x+y+z) dx dy dz
         expected = integrate(integrate(integrate(sin(x + y + z), (x, 0, 1)), (y, 0, 1)), (z, 0, 1))
         result = multiple_integrate(sin(x + y + z), (x, 0, 1), (y, 0, 1), (z, 0, 1))
-        assert_eq(result, expected, "S5: sin(x+y+z) 3-D")
+        assert_eq(result, expected, "additive separability: sin(x+y+z) 3-D")
 
     def test_separable_log_sum(self):
         # ∫_1^e∫_1^e log(x+y) dx dy  — g = x+y but log is non-poly outer
         # Use direct SymPy as ground truth
         expected = integrate(integrate(log(x + y), (x, 1, E)), (y, 1, E))
         result = multiple_integrate(log(x + y), (x, 1, E), (y, 1, E))
-        assert_eq(result, expected, "S5: log(x+y)")
+        assert_eq(result, expected, "additive separability: log(x+y)")
 
     # ── Discontinuous g in separable setting ─────────────────────────────────
     def test_separable_heaviside_g(self):
         # ∫_0^2∫_0^2 Heaviside(x + y - 2) dx dy
         # = area where x+y > 2 in [0,2]²  = 2  (upper triangle of 2×2 square)
         result = multiple_integrate(Heaviside(x + y - 2), (x, 0, 2), (y, 0, 2))
-        assert_eq(result, Integer(2), "S5/S9: Heaviside(x+y-2)")
+        assert_eq(result, Integer(2), "additive separability/iterated fallback: Heaviside(x+y-2)")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §G  Strategy 6 – Monotone substitution
+# Monotone substitution
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy6Monotone:
     """
-    S6 fires when g depends on a single variable, is monotone on the domain
+    monotone change fires when g depends on a single variable, is monotone on the domain
     (no interior critical points), and is analytically invertible.
     """
 
@@ -442,42 +446,42 @@ class TestStrategy6Monotone:
     def test_exp_monotone_increasing(self):
         # ∫_0^1 exp(x) dx = e - 1  (g = exp(x), strictly increasing)
         result = multiple_integrate(exp(x), (x, 0, 1))
-        assert_eq(result, E - 1, "S6: ∫exp(x)")
+        assert_eq(result, E - 1, "monotone change: ∫exp(x)")
 
     def test_log_monotone_increasing(self):
         # ∫_1^e log(x) dx = 1  (g = log(x), monotone increasing on [1,e])
         result = multiple_integrate(log(x), (x, 1, E))
-        assert_eq(result, Integer(1), "S6: ∫log(x)")
+        assert_eq(result, Integer(1), "monotone change: ∫log(x)")
 
     def test_rational_arctan(self):
         # ∫_0^1 1/(1+x²) dx = π/4  (monotone decreasing)
         result = multiple_integrate(1 / (1 + x**2), (x, 0, 1))
-        assert_eq(result, pi / 4, "S6: arctan integral")
+        assert_eq(result, pi / 4, "monotone change: arctan integral")
 
     def test_sqrt_monotone(self):
         # ∫_0^4 √x dx = 16/3
         result = multiple_integrate(sqrt(x), (x, 0, 4))
-        assert_eq(result, Rational(16, 3), "S6: ∫√x")
+        assert_eq(result, Rational(16, 3), "monotone change: ∫√x")
 
     def test_exp_negative_monotone_decreasing(self):
         # ∫_0^∞ exp(-x) dx = 1
         result = multiple_integrate(exp(-x), (x, 0, oo))
-        assert_eq(result, Integer(1), "S6: ∫exp(-x) to ∞")
+        assert_eq(result, Integer(1), "monotone change: ∫exp(-x) to ∞")
 
     def test_exp_neg_x2_half_line(self):
         # ∫_0^∞ exp(-x²) dx = √π/2  (monotone decreasing on [0,∞))
         result = multiple_integrate(exp(-(x**2)), (x, 0, oo))
-        assert_eq(result, sqrt(pi) / 2, "S6: Gaussian half-line")
+        assert_eq(result, sqrt(pi) / 2, "monotone change: Gaussian half-line")
 
     def test_monotone_in_one_var_of_two(self):
         # ∫_0^1∫_0^1 exp(-x) dx dy = 1 - 1/e  (g = exp(-x), y is free)
         result = multiple_integrate(exp(-x), (x, 0, 1), (y, 0, 1))
-        assert_eq(result, 1 - 1 / E, "S6: exp(-x) with free y dim")
+        assert_eq(result, 1 - 1 / E, "monotone change: exp(-x) with free y dim")
 
     def test_power_function(self):
         # ∫_0^1 x**(1/3) dx = 3/4
         result = multiple_integrate(x ** Rational(1, 3), (x, 0, 1))
-        assert_eq(result, Rational(3, 4), "S6: x^(1/3)")
+        assert_eq(result, Rational(3, 4), "monotone change: x^(1/3)")
 
     # ── Non-analytic f with monotone g ───────────────────────────────────────
     def test_abs_of_exp(self):
@@ -488,7 +492,7 @@ class TestStrategy6Monotone:
         result = multiple_integrate(Abs(exp(x) - E / 2), (x, 0, 1))
         # Just verify it matches direct sympy
         assert sym_eq(result, expected) or not result.has(sp.Integral), (
-            f"S6+non-analytic f: got {result}"
+            f"monotone change+non-analytic f: got {result}"
         )
 
     # ── Divergent monotone integrals ──────────────────────────────────────────
@@ -500,7 +504,7 @@ class TestStrategy6Monotone:
     def test_divergent_log_singularity(self):
         # ∫_0^1 log(x) dx = -1  (integrable singularity at 0)
         result = multiple_integrate(log(x), (x, 0, 1))
-        assert_eq(result, Integer(-1), "S6: ∫log(x) on [0,1] (integrable sing.)")
+        assert_eq(result, Integer(-1), "monotone change: ∫log(x) on [0,1] (integrable sing.)")
 
     def test_divergent_1_over_x(self):
         # ∫_0^1 1/x dx  diverges
@@ -509,88 +513,88 @@ class TestStrategy6Monotone:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §H  Strategy 7 – Piecewise-monotone
+# Piecewise-monotone substitution
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy7PiecewiseMonotone:
     """
-    S7 fires when g has interior critical points; the domain is split and
-    S6 is applied to each monotone piece.
+    piecewise-monotone change fires when g has interior critical points; the domain is split and
+    monotone change is applied to each monotone piece.
     """
 
     # ── Non-monotone trigonometric g ─────────────────────────────────────────
     def test_sin_one_arch(self):
         # ∫_0^π sin(x) dx = 2  (one arch — one critical point at π/2)
         result = multiple_integrate(sin(x), (x, 0, pi))
-        assert_eq(result, Integer(2), "S7: ∫sin(x) [0,π]")
+        assert_eq(result, Integer(2), "piecewise-monotone change: ∫sin(x) [0,π]")
 
     def test_cos_full_period(self):
         # ∫_0^{2π} cos(x) dx = 0  (two monotone pieces: [0,π], [π,2π])
         result = multiple_integrate(cos(x), (x, 0, 2 * pi))
-        assert_eq(result, Integer(0), "S7: ∫cos(x) [0,2π]")
+        assert_eq(result, Integer(0), "piecewise-monotone change: ∫cos(x) [0,2π]")
 
     def test_abs_x_symmetric(self):
         # ∫_{-1}^{1} |x| dx = 1  (critical point at 0, non-analytic)
         result = multiple_integrate(Abs(x), (x, -1, 1))
-        assert_eq(result, Integer(1), "S7: ∫|x| [-1,1]")
+        assert_eq(result, Integer(1), "piecewise-monotone change: ∫|x| [-1,1]")
 
     def test_x_squared_non_monotone(self):
         # ∫_{-1}^{1} x² dx = 2/3  (x² has minimum at 0)
         result = multiple_integrate(x**2, (x, -1, 1))
-        assert_eq(result, Rational(2, 3), "S7: ∫x² [-1,1]")
+        assert_eq(result, Rational(2, 3), "piecewise-monotone change: ∫x² [-1,1]")
 
     def test_sin_squared(self):
         # ∫_0^π sin²(x) dx = π/2
         result = multiple_integrate(sin(x) ** 2, (x, 0, pi))
-        assert_eq(result, pi / 2, "S7: ∫sin²(x) [0,π]")
+        assert_eq(result, pi / 2, "piecewise-monotone change: ∫sin²(x) [0,π]")
 
     def test_two_arch_sin(self):
         # ∫_0^{2π} sin(x) dx = 0  (two arches, opposite signs)
         result = multiple_integrate(sin(x), (x, 0, 2 * pi))
-        assert_eq(result, Integer(0), "S7: ∫sin(x) [0,2π]")
+        assert_eq(result, Integer(0), "piecewise-monotone change: ∫sin(x) [0,2π]")
 
     def test_cos_of_x_times_exp_neg_x(self):
         # ∫_0^π cos(x)·exp(-x) dx  — piecewise-monotone in cos(x)
         # Analytic: Re[∫_0^π exp((-1+i)x) dx] = Re[1/(1-i)·(1 - exp((-1+i)π))]
         expected = integrate(cos(x) * exp(-x), (x, 0, pi))
         result = multiple_integrate(cos(x) * exp(-x), (x, 0, pi))
-        assert_eq(result, expected, "S7: ∫cos(x)exp(-x) [0,π]")
+        assert_eq(result, expected, "piecewise-monotone change: ∫cos(x)exp(-x) [0,π]")
 
     def test_piecewise_monotone_with_extra_dim(self):
         # ∫_0^π∫_0^1 sin(x) dy dx = 2  (y is free, contributes factor 1)
         result = multiple_integrate(sin(x), (x, 0, pi), (y, 0, 1))
-        assert_eq(result, Integer(2), "S7: sin(x) with free y dim")
+        assert_eq(result, Integer(2), "piecewise-monotone change: sin(x) with free y dim")
 
     # ── Non-analytic f, non-monotone g ────────────────────────────────────────
     def test_abs_cos(self):
         # ∫_0^π |cos(x)| dx = 2
         result = multiple_integrate(Abs(cos(x)), (x, 0, pi))
-        assert_eq(result, Integer(2), "S7: ∫|cos(x)| [0,π]")
+        assert_eq(result, Integer(2), "piecewise-monotone change: ∫|cos(x)| [0,π]")
 
     def test_abs_sin_full_period(self):
         # ∫_0^{2π} |sin(x)| dx = 4
         result = multiple_integrate(Abs(sin(x)), (x, 0, 2 * pi))
-        assert_eq(result, Integer(4), "S7: ∫|sin(x)| [0,2π]")
+        assert_eq(result, Integer(4), "piecewise-monotone change: ∫|sin(x)| [0,2π]")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §I  Strategy 8 – General non-polynomial Heaviside layer-cake
+# General non-polynomial level-set integration
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy8GeneralNonpoly:
     """
-    S8 fires for multi-variable non-polynomial g that doesn't satisfy
-    the separability condition (S5), when SymPy can integrate Θ(y-g).
+    general level-set fires for multi-variable non-polynomial g that doesn't satisfy
+    the separability condition (additive separability), when SymPy can integrate Θ(y-g).
     """
 
     def test_sin_plus_cos_mixed(self):
         # ∫_0^{π/2}∫_0^{π/2} sin(x)·cos(y) dx dy = 1
         # Decompose: f=identity, g = sin(x)*cos(y) — product, not sum
-        # S5 won't fire (product not sum); S8 or fallback
+        # additive separability won't fire (product not sum); general level-set or fallback
         result = multiple_integrate(sin(x) * cos(y), (x, 0, pi / 2), (y, 0, pi / 2))
-        assert_eq(result, Integer(1), "S8/S9: ∫∫sin(x)cos(y)")
+        assert_eq(result, Integer(1), "general level-set/iterated fallback: ∫∫sin(x)cos(y)")
 
     def test_exp_product(self):
         # ∫_0^1∫_0^1 exp(-x·y) dx dy
@@ -598,7 +602,7 @@ class TestStrategy8GeneralNonpoly:
         expected = integrate(integrate(exp(-x * y), (x, 0, 1)), (y, 0, 1))
         result = multiple_integrate(exp(-x * y), (x, 0, 1), (y, 0, 1))
         assert sym_eq(result, expected) or not result.has(sp.Integral), (
-            f"S8/S9: ∫∫exp(-xy) got {result}"
+            f"general level-set/iterated fallback: ∫∫exp(-xy) got {result}"
         )
 
     def test_cos_product_unit_square(self):
@@ -606,18 +610,18 @@ class TestStrategy8GeneralNonpoly:
         expected = integrate(integrate(cos(x * y), (x, 0, 1)), (y, 0, 1))
         result = multiple_integrate(cos(x * y), (x, 0, 1), (y, 0, 1))
         assert sym_eq(result, expected) or not result.has(sp.Integral), (
-            f"S8/S9: ∫∫cos(xy) got {result}"
+            f"general level-set/iterated fallback: ∫∫cos(xy) got {result}"
         )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# §J  Strategy 9 – Fallback (plain iterated integration)
+# Ordinary iterated integration
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 class TestStrategy9Fallback:
     """
-    S9 is the catch-all.  These integrals either can't be decomposed as f(g)
+    iterated fallback is the catch-all.  These integrals either can't be decomposed as f(g)
     or no earlier strategy applies; we verify correctness but don't assert
     which strategy fires (only that some answer comes out).
     """
@@ -625,35 +629,35 @@ class TestStrategy9Fallback:
     def test_product_xy_unit_square(self):
         # ∫∫_{[0,1]²} xy dx dy = 1/4
         result = multiple_integrate(x * y, (x, 0, 1), (y, 0, 1))
-        assert_eq(result, Rational(1, 4), "S9: xy unit square")
+        assert_eq(result, Rational(1, 4), "iterated fallback: xy unit square")
 
     def test_variable_limits_triangle(self):
         # ∫_0^1∫_0^{1-x} (x+y) dy dx = 1/3
         result = multiple_integrate(x + y, (y, 0, 1 - x), (x, 0, 1))
-        assert_eq(result, Rational(1, 3), "S9: triangle x+y")
+        assert_eq(result, Rational(1, 3), "iterated fallback: triangle x+y")
 
     def test_exp_over_x_y_domain(self):
         # ∫_0^1∫_0^x exp(y/x) dy dx
         expected = integrate(integrate(exp(y / x), (y, 0, x)), (x, 0, 1))
         result = multiple_integrate(exp(y / x), (y, 0, x), (x, 0, 1))
         assert sym_eq(result, expected) or not result.has(sp.Integral), (
-            f"S9: ∫∫exp(y/x) got {result}"
+            f"iterated fallback: ∫∫exp(y/x) got {result}"
         )
 
     def test_mixed_poly_trig(self):
         # ∫_0^π x·sin(x) dx = π  (integration by parts)
         result = multiple_integrate(x * sin(x), (x, 0, pi))
-        assert_eq(result, pi, "S9/S6: x·sin(x)")
+        assert_eq(result, pi, "iterated fallback/monotone change: x·sin(x)")
 
     def test_x_times_log(self):
         # ∫_0^1 x·log(x) dx = -1/4
         result = multiple_integrate(x * log(x), (x, 0, 1))
-        assert_eq(result, Rational(-1, 4), "S9: x·log(x)")
+        assert_eq(result, Rational(-1, 4), "iterated fallback: x·log(x)")
 
     def test_sin_cos_product_2d(self):
         # ∫_0^π∫_0^π sin(x)·cos(y) dx dy = 0  (product of independent integrals)
         result = multiple_integrate(sin(x) * cos(y), (x, 0, pi), (y, 0, pi))
-        assert_eq(result, Integer(0), "S9: sin(x)cos(y) [0,π]²")
+        assert_eq(result, Integer(0), "iterated fallback: sin(x)cos(y) [0,π]²")
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -857,8 +861,8 @@ class TestContinuousVsDiscontinuousG:
 
 class TestMonotoneVsNonMonotone:
     """
-    Monotone g → S6 (single variable) or S1 (linear).
-    Non-monotone g → S7 (piecewise-monotone) or general strategies.
+    Monotone g → monotone change (single variable) or linear pushforward (linear).
+    Non-monotone g → piecewise-monotone change (piecewise-monotone) or general strategies.
     """
 
     # ── Strictly monotone ─────────────────────────────────────────────────────
@@ -912,8 +916,8 @@ class TestMonotoneVsNonMonotone:
 
 class TestPolynomialVsNonPolynomial:
     """
-    Polynomial g → S1–S4 (depending on domain/degree).
-    Non-polynomial g → S5–S9.
+    Polynomial g → linear pushforward–polynomial level-set (depending on domain/degree).
+    Non-polynomial g → additive separability–iterated fallback.
     """
 
     # ── Polynomial g ─────────────────────────────────────────────────────────

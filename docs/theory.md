@@ -1,8 +1,8 @@
 # Theory
 
-This page summarizes the mathematical ideas behind the current package.
+This page summarizes the mathematical ideas behind the package.
 
-MultipleIntegrate is no longer just a layer-cake engine. The present implementation combines several viewpoints:
+MultipleIntegrate combines several mathematical viewpoints:
 
 - direct evaluation on standard regions
 - Dirichlet / Beta / Gamma exact formulas
@@ -29,7 +29,7 @@ represents
 \int_0^1 \int_0^{1-x} \text{expr} \, dy \, dx.
 \]
 
-This is only a user-interface convention. Internally, some region recognizers may normalize the data into a different form for pattern matching, but that is not visible at the API level.
+This is only a user-interface convention. Internally, standalone region recognition can inspect either structural orientation for pattern matching, while `multiple_integrate` keeps the supplied inner-first semantics. Geometric shortcuts preserve the proved orientation of explicit ranges rather than silently replacing an oriented integral by an unsigned volume.
 
 ---
 
@@ -63,7 +63,7 @@ For suitable exponents,
 \frac{\prod_{j=1}^{n+1}\Gamma(a_j)}{\Gamma(a_1+\cdots+a_{n+1})}.
 \]
 
-This formula is one of the core exact engines in the current package.
+This formula is a core exact formula used for simplex integrals.
 
 ---
 
@@ -103,7 +103,7 @@ as
 \int_{T^{-1}(R)} F(T(u)) \, |\det DT(u)| \, du.
 \]
 
-In the current package this idea is implemented in curated, structured ways rather than as unrestricted symbolic inversion.
+In the package this idea is implemented in curated, structured ways rather than as unrestricted symbolic inversion.
 
 ### Polar coordinates
 
@@ -122,7 +122,7 @@ x = \rho\sin\phi\cos\theta,
 \quad dV = \rho^2\sin\phi\,d\rho\,d\phi\,d\theta.
 \]
 
-These are used when the transformed region and integrand become simpler.
+Translated disks, balls, and ellipsoids include their stored centers in these maps. A coordinate change is considered successful only when the transformed integration actually evaluates; an unevaluated transformed `Integral` does not block later strategies.
 
 ---
 
@@ -154,7 +154,7 @@ in selected situations, where
 \mu(y) = \int_\Omega \mathbf{1}[g(x) \le y] \, dx.
 \]
 
-This remains useful for monotone, piecewise-monotone, separable, and selected non-polynomial cases. But it is now one tool among several, not the sole conceptual center of the solver.
+This is useful for monotone, piecewise-monotone, separable, and selected non-polynomial cases. It complements region formulas, coordinate changes, and direct iterated integration.
 
 ---
 
@@ -162,7 +162,18 @@ This remains useful for monotone, piecewise-monotone, separable, and selected no
 
 The package does **not** implement a complete general convergence theory for arbitrary symbolic multiple integrals.
 
-However, the current implementation does perform **basic structured-path checks** in some important situations, such as:
+Assumptions may be supplied as ordinary SymPy relational conditions or ``Q`` predicates, for example:
+
+```python
+multiple_integrate(exp(-a*x), (x, 0, oo), assumptions={a > 0})
+multiple_integrate(expr, *ranges, assumptions={Q.positive(a), Q.integer(n)})
+```
+
+These conditions are normalized to SymPy predicates and are used both by
+MultipleIntegrate's structured convergence checks and to refine results returned
+by SymPy. Contradictory assumptions are rejected.
+
+The implementation performs **basic structured-path checks** in important situations such as:
 
 - Dirichlet/simplex exponent conditions
 - selected Gaussian positive-definiteness checks

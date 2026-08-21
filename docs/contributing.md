@@ -1,6 +1,6 @@
 # Contributing
 
-This guide explains the current project layout and the main ideas to keep in mind when extending MultipleIntegrate.
+This guide explains the project layout and the main ideas to keep in mind when extending MultipleIntegrate.
 
 ---
 
@@ -28,9 +28,9 @@ docs/
 
 ---
 
-## Current architectural picture
+## Architecture
 
-The package is no longer just a single decomposition-first engine. The current flow is closer to:
+The package uses the following layered flow:
 
 ```text
 multiple_integrate(expr, *ranges)
@@ -77,7 +77,7 @@ Typical tasks:
 
 If a class of integrals has a stable closed form, prefer implementing that directly rather than relying on generic SymPy definite integration.
 
-Current examples include:
+Examples include:
 
 - simplex / Dirichlet formulas
 - selected disk / ball / shell formulas
@@ -95,13 +95,13 @@ When extending this area, focus on transformations that are:
 
 ### 4. Decomposition-based methods
 
-`Decomposition` and its helpers still matter for monotone, piecewise-monotone, separable, and selected layer-cake style methods.
+`_IntegrandDecomposition` and its helpers still matter for monotone, piecewise-monotone, separable, and selected layer-cake style methods.
 
-This is a useful extension area, but it should now be thought of as one family inside the broader solver.
+This is a useful extension area, but it is best treated as one family inside the broader solver.
 
 ---
 
-## Adding a new capability
+## Adding a capability
 
 A good pattern is:
 

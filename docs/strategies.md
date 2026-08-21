@@ -1,138 +1,37 @@
-# Strategies
+# Integration methods
 
-MultipleIntegrate no longer fits neatly into a single linear story of "nine strategies". The current solver is better described as a **layered planner** with several families of methods:
+MultipleIntegrate uses a layered planner. Methods are selected from the mathematical structure of the region and integrand rather than from a fixed numbered sequence.
 
-1. region recognition
-2. exact structured formulas
-3. symmetry and separability heuristics
-4. coordinate changes
-5. generic SymPy fallback
+## Region recognition
 
-This page summarizes the main strategy families and when they are useful.
+Nested bounds are classified into boxes, graph regions, simplices, affine simplices, disks, annuli, balls, spherical shells, ellipsoids, or a general iterated region. Recognized geometry enables exact formulas that are unavailable to a purely syntactic iterated integrator.
 
----
+## Structured exact formulas
 
-## 1. Region recognition
+Product regions support inactive-dimension elimination and product separation. Simplex and affine-simplex regions support Dirichlet and polynomial-moment formulas. Disks, balls, annuli, shells, and ellipsoids support selected volume, moment, radial, and transformed integrals.
 
-Before attempting expensive symbolic integration, the solver tries to classify the integration domain from the given iterated bounds.
+## Symmetry and separability
 
-Recognized families include:
+Reflection invariance can eliminate odd contributions after singularity safety checks. Symmetry is tested before coordinate transformations so a cheap exact cancellation is not replaced by a harder transformed integral. Product-separable integrands are reduced to independent one-dimensional integrals. Additively separable inner expressions can be treated through pushforward densities when their ranges are independent.
 
-- `BoxRegion`
-- `GraphRegion`
-- `SimplexRegion`
-- `AffineSimplexRegion`
-- `DiskRegion`
-- `AnnulusRegion`
-- `BallRegion`
-- `SphericalShellRegion`
-- `EllipsoidRegion`
-- `UnionRegion` in selected internal constructions
+## Coordinate changes
 
-If no stronger structure is found, the domain is represented as `IteratedRegion`.
+Polar coordinates are used for disks and annuli, spherical coordinates for balls and shells, and affine normalization for affine simplices and ellipsoids. Translated disks, balls, and ellipsoids retain their centers in the coordinate map. A transformation is accepted only when the target ranges and Jacobian can be represented exactly, and a transformed result that still contains an unevaluated `Integral` is treated as an unsuccessful strategy so other methods can continue.
 
-This stage matters because many exact formulas depend more on the geometry of the region than on the superficial syntax of the bounds.
+For explicit symbolic ranges, geometric formulas are used only when range orientation can be proved under the active assumptions. This prevents unsigned geometric volume formulas from replacing oriented iterated integrals.
 
----
+## Composition and level-set methods
 
-## 2. Exact structured formulas
+For an integrand expressible as `f(g(x))`, the internal composition analysis identifies the outer function and inner expression. Depending on the structure of `g`, the planner may use linear pushforward formulas, monotone substitutions, piecewise-monotone substitutions, polynomial level-set integration, or a general symbolic level-set density.
 
-### Boxes and inactive dimensions
+## Iterated fallback
 
-On product regions, the solver can often factor constants, strip inactive finite dimensions, and reduce the problem to lower-dimensional exact integration.
+When no specialized method is justified, MultipleIntegrate evaluates the supplied inner-first ranges with SymPy. Specialized methods are conservative optimizations: an uncertain structural match should fall back rather than change the mathematical domain or return an unsupported closed form.
 
-### Simplices and affine simplices
+## Boolean restrictions
 
-This is one of the most important exact families in the current package.
+Boolean `Or` conditions are converted to a `UnionRegion` only when the resulting pieces can be proved pairwise disjoint. If disjointness is uncertain or branches overlap, the union shortcut is declined and the ordinary symbolic path handles the Boolean expression without double counting.
 
-The solver recognizes many integrands of Dirichlet type,
+## Bounded heuristic solving
 
-\[
-x_1^{a_1-1}\cdots x_n^{a_n-1}(1-x_1-\cdots-x_n)^{a_{n+1}-1},
-\]
-
-including fractional exponents when the convergence conditions are sufficiently clear. In these cases it returns the Gamma-ratio formula directly instead of delegating to SymPy.
-
-Polynomial sums of such terms can also be handled after expansion.
-
-### Disks, balls, annuli, shells, ellipsoids
-
-For standard geometric regions, region-specific methods can compute selected moments and selected transformed integrals exactly.
-
----
-
-## 3. Symmetry and separability
-
-The solver also uses structure in the integrand itself.
-
-Important examples:
-
-- reflection symmetry leading to vanishing odd contributions
-- product separability on boxes and some transformed regions
-- detection of inactive variables
-- selected decomposition of an integrand into `f(g(...))`
-
-These reductions often simplify a problem enough that later strategies become straightforward.
-
----
-
-## 4. Coordinate changes
-
-A major recent addition is a structured coordinate-change layer.
-
-### Polar coordinates
-
-Used on disks and annuli when the transformed integrand becomes manageable. The package is no longer limited to purely radial integrands; some angular-factorizable cases are also supported.
-
-### Spherical coordinates
-
-Used on balls and spherical shells for selected radial or separable angular/radial families.
-
-### Affine normalizations
-
-Used for selected ellipsoidal and affine-simplex situations.
-
-### Quadratic Gaussian reductions
-
-Used for selected full-space Gaussian integrals where a structured change of variables simplifies the quadratic form.
-
----
-
-## 5. Decomposition-based legacy heuristics
-
-The package still contains decomposition-driven logic that tries to write an integrand as
-
-\[
-F(x_1,\dots,x_n) = f(g(x_1,\dots,x_n)).
-\]
-
-That logic remains useful for several classes of non-region-specific problems, especially monotone, piecewise-monotone, separable, and selected layer-cake reductions.
-
-It is best thought of as one family inside the larger planner rather than the whole architecture.
-
----
-
-## 6. Fallback
-
-When no structured method succeeds, the solver falls back to nested `sympy.integrate`.
-
-This fallback uses the same public convention as the rest of the package: the ranges are interpreted in **inner-first iterated order**.
-
-Fallback is important, but it is intentionally last because:
-
-- it can be much slower than exact structured methods
-- it may introduce branch-sensitive hypergeometric forms
-- it can return unevaluated integrals
-
----
-
-## Practical interpretation
-
-A useful mental model is:
-
-- if the **region** is standard, the solver first tries to exploit that
-- if the **integrand** has special structure, the solver tries to exploit that
-- if a **coordinate change** makes the problem standard, the solver tries that
-- otherwise it falls back to SymPy
-
-That is why the package often succeeds on integrals that look complicated but have strong hidden structure.
+Critical-point searches are heuristic accelerators rather than correctness requirements. Candidate critical points are used only when their interval membership can be proved. Symbolic solves in this path use a POSIX timer when available; in execution contexts without a safe interval timer, the heuristic is skipped rather than allowed to run without a bound. Existing process timers are preserved.
