@@ -1,99 +1,49 @@
-Nested ranges and region classification
-=======================================
+Ranges and regions
+==================
 
-The range convention
---------------------
+Why there are two domain forms
+------------------------------
 
-MultipleIntegrate uses the same iterated-integral ordering as
-``sympy.integrate``: the **first range is integrated first**, so it is the
-innermost integral.
+MultipleIntegrate accepts a domain in two complementary forms:
 
-For example,
+* **nested ranges** describe an iterated integral and make integration order explicit;
+* **canonical semialg regions** describe geometry independently of any particular coordinate order.
+
+Use ranges when the bounds are part of the problem. Use a ``semialg`` region when you want one
+reusable geometric object for integration, membership, measure, centroid, sampling, or affine
+transformation.
+
+This distinction keeps geometry in ``semialg`` and integration strategy in MultipleIntegrate.
+Range recognition inside MultipleIntegrate is planner data: it helps choose exact formulas without
+creating a second public geometry API.
+
+Range order
+-----------
+
+MultipleIntegrate follows the same inner-first convention as ``sympy.integrate``. For
 
 .. math::
 
-   \int_0^1 \int_0^{1-x} f(x,y)\,dy\,dx
+   \int_0^1 \int_0^{1-x} f(x,y)\,dy\,dx,
 
-is written as:
+the dependent inner range comes first:
 
 .. code-block:: python
 
-   multiple_integrate(
+   result = integrate(
        f,
        (y, 0, 1 - x),
        (x, 0, 1),
    )
 
-The upper bound of ``y`` may depend on ``x`` because ``x`` remains free while
-the inner ``y`` integral is evaluated. Reversing those tuples without deriving
-new bounds generally describes a different iterated integral.
+Reordering dependent ranges without deriving new bounds changes the domain.
 
-Ranges as geometry
-------------------
+Recognizing structure in ranges
+-------------------------------
 
-A list of nested ranges describes more than an evaluation order: it also
-describes a geometric domain. ``region_from_ranges`` analyzes that structure
-and returns the most specific region type it can justify.
-
-Conceptually, classification proceeds from informative geometric patterns
-toward a generic fallback:
-
-.. code-block:: text
-
-   nested ranges
-       |
-       +-- independent constant bounds --------> BoxRegion
-       |
-       +-- standard simplex bounds ------------> SimplexRegion
-       |
-       +-- affine simplex bounds --------------> AffineSimplexRegion
-       |
-       +-- circular / spherical bounds --------> DiskRegion / BallRegion
-       |
-       +-- unequal quadratic semi-axes --------> EllipsoidRegion
-       |
-       +-- dependent graph bounds -------------> GraphRegion
-       |
-       `-- otherwise --------------------------> IteratedRegion
-
-Classification is deliberately conservative. A specialized region should be
-returned only when the bounds establish the corresponding geometry. This
-matters because specialized objects can provide exact volume, moment, radial,
-symmetry, or change-of-variables shortcuts.
-
-Structural orientation versus public ordering
-----------------------------------------------
-
-Geometric recognition is often easiest when bounds are inspected
-outer-to-inner, whereas the public API follows SymPy's inner-first convention.
-The classifier may therefore inspect plausible structural orientations
-internally. Once a region is recognized, its stored ranges are canonicalized
-back to the package's public inner-first convention.
-
-Users should continue to supply ranges exactly as they would to
-``sympy.integrate``.
-
-Why classification matters
---------------------------
-
-Region recognition can replace a difficult symbolic iterated integral with an
-exact formula. Specialized paths include:
-
-* constant volume for boxes, disks, balls, ellipsoids, annuli, spherical
-  shells, and simplices;
-* polynomial moments on several structured regions;
-* cancellation of odd terms on reflection-invariant domains;
-* polar or spherical changes of variables for suitable radial integrands;
-* affine normalization of an affine simplex to a standard simplex;
-* selected graph-region order reversal.
-
-If no specialized path applies, ``multiple_integrate`` retains a general
-iterated SymPy integration fallback. Region recognition is therefore an
-optimization and reasoning layer rather than a requirement for every valid
-integral.
-
-Inspecting a classification
----------------------------
+``region_from_ranges`` classifies useful integration structure such as independent boxes,
+simplexes, affine simplexes, radial quadrics, graph-bounded domains, and general iterated domains.
+The returned object is useful when inspecting planner behavior or testing recognition:
 
 .. code-block:: python
 
@@ -101,36 +51,62 @@ Inspecting a classification
    from multiple_integrate import region_from_ranges
 
    x, y = sp.symbols("x y", real=True)
-
-   ranges = [
+   domain = region_from_ranges([
        (y, 0, 1 - x),
        (x, 0, 1),
-   ]
+   ])
 
-   region = region_from_ranges(ranges)
+   assert domain.variables == (y, x)
+   assert domain.constant_volume() == sp.Rational(1, 2)
 
-   print(type(region).__name__)
-   print(region.variables)
-   print(region.normalized_ranges())
-   print(region.constant_volume())
+Most application code does not need to construct these internal domain models directly.
 
-The region classes and classification functions are documented in
-:doc:`../api/regions`.
+Using canonical geometry
+------------------------
 
-Translated quadrics
--------------------
+When the geometry is known, construct it with ``semialg`` and pass it through ``region=``:
 
-Disk, ball, and axis-aligned ellipsoid recognition also accepts coordinate shifts.
-For example, bounds equivalent to ``(x-cx)**2 + (y-cy)**2 <= R**2`` produce a
-``DiskRegion`` with a nonzero ``center``.  The center tuple follows the same variable
-ordering as ``region.variables``. Polynomial moments and radial shortcuts translate to
-the stored center before applying the standard centered formulas.
+.. code-block:: python
 
-Union semantics
----------------
+   import semialg
+   import sympy as sp
+   from multiple_integrate import integrate
 
-``UnionRegion`` represents an additive disjoint decomposition, not a general
-inclusion-exclusion set union. Pieces must use the same ordered variables and be
-disjoint up to measure-zero boundaries. The constructor rejects overlaps it can prove
-for supported concentric radial pieces; when symbolic overlap is undecidable, the
-caller is responsible for supplying disjoint pieces.
+   x, y = sp.symbols("x y", real=True)
+   triangle = semialg.Simplex(((0, 0), (1, 0), (0, 1)))
+
+   result = integrate(x + y, region=triangle, variables=(x, y))
+   assert result == sp.Rational(1, 3)
+
+The same ``triangle`` object can be used with semialg's geometry operations. MultipleIntegrate
+uses public semialg lowering and intrinsic-chart APIs when those representations are needed for
+integration.
+
+Boolean semialgebraic domains
+-----------------------------
+
+A raw Boolean formula can also be passed as a region. Supply ``variables=`` so free parameters are
+not mistaken for integration coordinates:
+
+.. code-block:: python
+
+   condition = sp.And(x >= 0, y >= 0, x + y <= 1)
+   result = integrate(1, region=condition, variables=(x, y))
+   assert result == sp.Rational(1, 2)
+
+For reusable geometry, prefer a canonical semialg object when one exists. Formulas are most useful
+for domains defined naturally by inequalities or Boolean combinations.
+
+Disjoint decompositions
+-----------------------
+
+The planner can represent a finite disjoint decomposition as a sum of integration domains. This is
+an integration device. General geometric union, intersection, difference, topology, and membership
+belong to ``semialg``.
+
+See also
+--------
+
+* :doc:`measure-and-dimension` for ambient versus intrinsic integration;
+* :doc:`sampling` for representative and random points;
+* :doc:`../examples/regions` for complete examples.

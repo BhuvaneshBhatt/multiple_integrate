@@ -1,362 +1,211 @@
 # MultipleIntegrate
 
-**MultipleIntegrate** is a symbolic definite-integration package for exact evaluation of many multiple integrals.
+MultipleIntegrate evaluates definite multiple/multivariate integrals by combining SymPy-based evaluation with geometric reductions, moment rules, coordinate changes and some selected regularization prescriptions. It is useful when the structure of a density or domain supplies more information than a generic antiderivative search.
 
-It is designed for problems where direct antiderivatives are not the best approach. Instead, it combines structural recognition, simplfication, region-aware dispatch, and exact fallback methods for families such as:
+## Installation and dependencies
 
-- product-region multiple integrals
-- exact Dirichlet/simplex integrals with rational exponents
-- polynomial moments on boxes, simplices, disks, and balls
-- polar, spherical, and affine coordinate-change reductions for selected regions
-- selected simplex-like and level-set / layer-cake reductions
-- Gaussian integrals and Gaussian moments
-- rational full-line integrals
-- trigonometric and exponential transform-friendly integrals
-- beta/gamma-type exact integrals
-- selected dependent-bound graph regions
-- basic convergence and assumptions checks on structured exact paths
-
----
-
-## Installation
-
-```bash
-python -m pip install multiple-integrate
+```sh
+pip install multiple-integrate
 ```
 
-For development and tests:
-
-```bash
-python -m pip install -e ".[dev]"
-```
-
----
+Python 3.11 or newer is required. SymPy supplies symbolic expressions and fallback integration, `funcprops` supplies function-property queries, `semialg` supplies canonical region geometry and decompositions, and `mpmath` is used for numerical consistency checks. The package requires `semialg>=1.3.2`, `funcprops>=0.3.0`. The optional package `asymptotic>=0.2.1` handles supported asymptotic regularization work.
 
 ## Quick start
 
 ```python
-from sympy import symbols, sin, cos, exp, pi, oo
-from multiple_integrate import multiple_integrate
-
-x, y = symbols("x y", real=True)
-
-print(multiple_integrate(x**2 * y**3, (x, 0, 1), (y, 0, 1)))
-# 1/12
-
-print(multiple_integrate(exp(-(x**2 + y**2)), (x, -oo, oo), (y, -oo, oo)))
-# pi
-
-print(multiple_integrate(cos(x + y), (x, 0, pi), (y, 0, pi)))
-# -4
+import sympy as sp
+from multiple_integrate import integrate, integrate_result
+x, y, a = sp.symbols("x y a", real=True)
+assert integrate(x**2 * y, (x, 0, 1), (y, 0, 2)) == sp.Rational(2, 3)
+result = integrate_result(sp.sin(1/x)/x, (x, 0, 1))
+assert result.value == sp.pi/2-sp.Si(1)
+assert result.ordinary_convergent is True
+assert result.absolute_convergent is False
 ```
 
----
-
-
-## Range convention
-
-`multiple_integrate` follows **exactly the same range convention as `sympy.integrate`**:
-
-- range tuples are interpreted in **inner-first iterated order**
-- the **first** tuple is the innermost integral
-- the **last** tuple is the outermost integral
-
-So a triangular integral should be written as
+Boolean formulas use the same `region=` argument:
 
 ```python
-multiple_integrate(1, (y, 0, 1 - x), (x, 0, 1))
+triangle = sp.And(x >= 0, y >= 0, x+y <= 1)
+assert integrate(sp.exp(x + y), region=triangle, variables=(x, y)) == 1
 ```
 
-not with the structural outer-to-inner ordering used, for example, by Mathematica. The same convention is used by `multiple_integrate`; standalone `region_from_ranges(...)` can also inspect an explicitly requested structural order for geometric classification.
+Integration ranges are listed from innermost to outermost, not with the outer-to-inner ordering used, for example, by Mathematica. Dependent bounds use explicit triples; reversed independent ranges preserve orientation. Canonical `semialg` objects use `region=` and explicit `variables=`. Select `measure_dimension` for points, curves or surfaces, because ambient volume and intrinsic measure are distinct.
 
-This matters especially for triangular, disk, and ball examples with dependent bounds: write the tuples in the same order you would pass them to `sympy.integrate`.
+```python
+import semialg
+from multiple_integrate import integrate_cells
+assert integrate(1, region=semialg.Box(((0, 1), (0, 2))), variables=(x, y)) == 2
+family = integrate_cells(1, region=x**2 <= a, variables=(x,),
+                         bounds={x: (-1, 1)}, parameters=(a,))
+assert family.complete and family.value.subs(a, sp.Rational(1, 4)) == 1
+```
 
-When bounds contain symbolic parameters, specialized geometric formulas are used only when their orientation can be established from the supplied assumptions. This preserves the signed semantics of iterated integration.
+Extensions include finite Laurent–Laplace moments on proved positive cutoffs, polynomial ellipsoid moments clipped by parallel affine planes, and weighted tangent-graph cutoffs that preserve the requested regulator. See [the formulas and prerequisites](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/laurent-clips-and-tangencies.md).
 
-## Assumptions
+## Capabilities and prerequisites
 
-Parameter assumptions can be supplied with ordinary SymPy relations or ``Q`` predicates:
+| Family | Exact strategy and required proofs |
+|---|---|
+| Boxes and product densities | Cached geometry, bounded sparse polynomial moments, separability; independent bounds and finite coefficients |
+| Polynomial times exponential/trigonometric functions | Affine-frequency recurrences with explicit zero-frequency branches |
+| Polynomial Gaussian moments | Shifted erf recurrence on finite intervals and, with proved positive decay, half-lines/full lines |
+| Endpoint and stretched-exponential moments | Exact endpoint factor orders; shifted/truncated gamma moments with proved decay and branch prerequisites |
+| Rational densities | Pole-free linear/quadratic interval formulas and positive shifted-biquadratic full-line moments |
+| Oscillatory improper densities | A few narrow Si/Ci and Dirichlet rules; conditional convergence is recorded separately from absolute convergence |
+| Nonseparable improper profiles | Global triangular polynomial shear charts and weighted moments with proved origin and tail thresholds |
+| Nonseparable polynomial phases on finite boxes | Exact uniformly convergent series; specialized bounded Taylor evaluation with analytic remainder |
+| Parametrized geometry | Budgeted polynomial event cells, proved quadratic ellipsoid moments, coupled affine/graph reductions |
+| Simplex, balls, shells and quadratic forms | Dirichlet, radial and Gaussian moments under sign, rank and dimension prerequisites |
+| Polygonal domains and convex 3D polytopes | Boundary flux, cached polynomial moments; affine exponentials on polygons and fixed-normal polygons on proved cells |
+| Graph domains, cusps and clipped polygons | Geometric reductions and proved contact/vanishing thresholds |
+| Singular product intersections | Affine or polynomial graph charts with proved inverses, Jacobians and the original shared cutoff |
+
+Use assumptions to express the prerequisites for the entire requested parameter cell. Sample points cannot certify a generic cell. There are complexity budgets that will decline expensive routes.
+
+## Results, evidence and regularization
+
+`integrate` returns the mathematical result without extra information. `integrate_result` adds outcomes, parameter cases, coverage, convergence evidence, diagnostics and limitations. Outcomes include finite, divergent, conditional, unsupported and unknown. An exact convergent series representation is finite; an unresolved arbitrary series is unknown. Coverage, ordinary convergence, absolute convergence and numerical consistency are separate claims.
+
+Assumptions can be provided via the option `assumptions=` or via symbol-attached assumptions. Temporary SymPy `assuming(...)` facts are excluded from package proof queries and refinement, so cached evidence cannot escape its parameter scope.
+
+Consistent convergence evidence is summarized across conditions only when they provably cover the requested parameter domain. Missing equality fibers, conflicting facts and unknown cells would prevent a global conclusion.
+
+If you need the principal value or Hadamard finite part for a divergent integral, ask for them specifically. Obviously a regularized value does not establish ordinary convergence.
+
+Selected affine/radial co-area dispatch, vector-valued maps, polynomial/Fourier and bounded rational angular amplitudes, caller-supplied parameter cells, and supplied rational, algebraic or polar charts use `multiple_integrate.coarea`; see [verified coarea reductions](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/coarea.md).
+
+`Boole(condition)` creates a SymPy indicator `Piecewise((1, condition), (0, True))`. Both forms are accepted by `integrate` within the supported geometry and convergence rules.
+
+## Reading guide
+
+The [executable method example catalog](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/method-examples.md) has a representative example for every documented method.
+
+The [method reference guide](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/method-references.md) maps mathematical methods to sources and implementation modules.
+
+- [Supported regions and measures](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/supported-regions.md)
+- [Bounded series evaluation](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/series-evaluation.md)
+- [Selected symbolic families](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/selected-symbolic-families.md)
+- [Exact fast methods and budgets](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/performance-methods.md)
+- [Parameterized integration](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/parameterized-integration.md)
+- [Result semantics and certfication](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/certification.md)
+- [Regularization](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/regularization.md)
+- [Polygon and polytope boundary reduction](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/boundary-reduction.md)
+- [Nonseparable improper integration](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/nonseparable-improper.md)
+- [Laurent moments, clips and tangencies](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/laurent-clips-and-tangencies.md)
+- [Nonlinear moments and singularities](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/nonlinear-moments-and-singularities.md)
+- [Sectors and contact charts](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/sectors-and-contact-charts.md)
+- [Limitations and known issues](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/limitations.md)
+
+Executable examples live in `examples/`, and `notebooks/multiple_integration.ipynb` is a demo notebook.
+
+## Worked examples
+
+### Layer-cake identity
+
+For a nonnegative density `f`, the layer-cake identity is
+`integral(f) = integral_0^infinity volume({f > t}) dt`, with infinite values
+allowed by Tonelli's theorem. For `f=exp(-g)` and `g>=0`, an equivalent form is
+`integral(exp(-g)) = integral_0^infinity exp(-t)*volume({g < t}) dt`.
+For the positive-quadrant superellipse `g=x**4+y**4`, the sublevel area is
+`Gamma(1/4)**2*sqrt(t)/(8*sqrt(pi))`:
 
 ```python
 import sympy as sp
-from multiple_integrate import multiple_integrate
-
-x, a = sp.symbols("x a", real=True)
-
-multiple_integrate(
-    sp.exp(-a*x),
-    (x, 0, sp.oo),
-    assumptions={a > 0},
-)
-# 1/a
+from multiple_integrate import integrate_result
+x, y = sp.symbols("x y", real=True)
+t = sp.Symbol("t", positive=True)
+area = sp.gamma(sp.Rational(1, 4))**2 * sp.sqrt(t)/(8*sp.sqrt(sp.pi))
+layer_value = sp.integrate(sp.exp(-t)*area, (t, 0, sp.oo))
+result = integrate_result(sp.exp(-(x**4+y**4)), (x, 0, sp.oo), (y, 0, sp.oo))
+assert sp.simplify(result.value-layer_value) == 0
+assert sp.simplify(layer_value-sp.gamma(sp.Rational(1,4))**2/16) == 0
 ```
 
-A single condition such as ``assumptions=a > 0`` is also accepted, as are lists, tuples, sets, and SymPy predicates such as ``Q.positive(a)``. Contradictory assumptions raise ``ValueError``.
+This demonstrates the identity and its value; the automatic planner may choose
+another proved route for the same density. See the selected-symbolic-family
+guide for endpoint factors and shifted or truncated gamma moments.
 
----
+<!-- geometry-casebook-start -->
+## Geometry casebook
 
-## Representative multiple-integral examples
-
-### Box moments
+The examples share these imports:
 
 ```python
+from dataclasses import replace
+import mpmath as mp
+import semialg
 import sympy as sp
-from sympy import symbols
-from multiple_integrate import multiple_integrate
-
-x, y = symbols("x y", real=True)
-
-multiple_integrate(x**2 * y**3, (x, 0, 1), (y, 0, 1))
-# 1/12
+from multiple_integrate import (HadamardFinitePart, IntegrationOutcome, ParameterCell,
+    integrate_cells, integrate_result, regularized_result, verify_regularization_result)
 ```
 
-### Simplex / triangle moments
+### Parameter cells and graph contact
 
 ```python
-from sympy import symbols, Rational
-from multiple_integrate import multiple_integrate
-
-x, y = symbols("x y", real=True)
-
-multiple_integrate(1, (y, 0, 1 - x), (x, 0, 1))
-# 1/2
-
-multiple_integrate(x * y, (y, 0, 1 - x), (x, 0, 1))
-# 1/24
-
-multiple_integrate(
-    x**Rational(1, 2) * y**Rational(3, 2) * (1 - x - y)**Rational(1, 2),
-    (y, 0, 1 - x),
-    (x, 0, 1),
-)
-# gamma(3/2)*gamma(5/2)*gamma(3/2)/gamma(11/2)
-```
-
-### Disk and ball moments
-
-```python
-from sympy import symbols, sqrt, exp, oo
-from multiple_integrate import multiple_integrate
-
-x, y, z = symbols("x y z", real=True)
-
-multiple_integrate(1, (y, -sqrt(1 - x**2), sqrt(1 - x**2)), (x, -1, 1))
-# pi
-
-multiple_integrate(
-    x**2 * y**2 / sqrt(1 - x**2 - y**2),
-    (y, -sqrt(1 - x**2), sqrt(1 - x**2)),
-    (x, -1, 1),
-)
-# pi/24
-
-multiple_integrate(
+x, y, a, b = sp.symbols("x y a b", real=True)
+result = integrate_cells(
     1,
-    (z, -sqrt(1 - x**2 - y**2), sqrt(1 - x**2 - y**2)),
-    (y, -sqrt(1 - x**2), sqrt(1 - x**2)),
-    (x, -1, 1),
+    region=sp.And(x >= 0, x <= a, y >= 0, y <= b - x**2),
+    variables=(x, y),
+    parameters=(a, b),
+    assumptions=sp.And(a > 0, b >= a**2),
+    cells=(ParameterCell(b > a**2), ParameterCell(sp.Eq(b, a**2), {b: a**2})),
 )
-# 4*pi/3
+assert sp.simplify(result.cases[0].value - (a * b - a**3 / 3)) == 0
+assert sp.simplify(result.cases[1].value - 2 * a**3 / 3) == 0
+```
 
-multiple_integrate(
-    (x**2 + y**2 + z**2) * exp(-(x**2 + y**2 + z**2)),
-    (z, -oo, oo),
-    (y, -oo, oo),
-    (x, -oo, oo),
+### Cusp contact and divergence
+
+```python
+x, y = sp.symbols("x y", real=True)
+base = x**3 - y**2
+horn = sp.And(x > 0, x < 1, y**2 <= x**3)
+result = integrate_result(base ** -sp.Rational(1, 2), region=horn, variables=(x, y))
+divergent = integrate_result(x**2 / base, region=horn, variables=(x, y))
+assert sp.simplify(sp.expand_func(result.value) - sp.pi) == 0
+assert result.absolute_convergent is True
+assert divergent.outcome is IntegrationOutcome.DIVERGENT
+```
+
+### Exact finite radial series
+
+```python
+x, y, z = sp.symbols("x y z", real=True)
+rho = x**2 + y**2 + z**2
+result = integrate_result(
+    sp.exp(-rho) / (2 + rho), region=semialg.Ball((0, 0, 0), 1), variables=(x, y, z)
 )
-# 3*pi**(3/2)/2
+assert result.value.has(sp.Sum) and result.absolute_convergent is True
+with mp.workdps(35):
+    reference = 4 * mp.pi * mp.quad(lambda r: r**2 * mp.exp(-r * r) / (2 + r * r), [0, 1])
+    assert abs(mp.mpf(str(result.value.evalf(30))) - reference) < mp.mpf("1e-25")
 ```
 
-### Gaussian moments
+### Clipped polygon finite part
 
 ```python
-from sympy import symbols, exp, oo
-from multiple_integrate import multiple_integrate
-
-x, y = symbols("x y", real=True)
-
-multiple_integrate(exp(-x**2), (x, -oo, oo))
-# sqrt(pi)
-
-multiple_integrate(x**2 * exp(-x**2), (x, -oo, oo))
-# sqrt(pi)/2
-
-multiple_integrate(exp(-(x**2 + y**2)), (x, -oo, oo), (y, -oo, oo))
-# pi
+x, y = sp.symbols("x y", real=True)
+polygon = sp.And(x >= 0, y >= 0, x <= sp.Rational(1, 2), x + y <= 1)
+result = regularized_result(
+    1 / (x * y),
+    region=polygon,
+    variables=(x, y),
+    regularization=HadamardFinitePart(hypersurface=x * y),
+)
+assert sp.simplify(result.value + sp.pi**2 / 12 - sp.log(2) ** 2) == 0
+assert verify_regularization_result(result).valid
+assert not verify_regularization_result(replace(result, value=result.value + 1)).valid
 ```
 
-### Rational full-line integrals
+For an ordinary result inspect `result.outcome`, `result.complete`, `result.coverage`, and `result.convergence_evidence`; for a family inspect each child in `result.diagnostics['cell_results']`. A finite-part answer describes its specified cutoff and does not prove ordinary convergence.
+<!-- geometry-casebook-end -->
 
-```python
-from sympy import symbols, oo
-from multiple_integrate import multiple_integrate
+## Contributing and project information
 
-x = symbols("x", real=True)
+Contributions – whether they are bug reports, suggestions, or code for bugfixes or improvements – are welcome!
 
-multiple_integrate(1 / (x**2 + 1), (x, -oo, oo))
-# pi
+For development setup, architecture and extension guidance, see [Contributing](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/contributing.md). The [testing guide](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/testing.md) describes the mathematical, property, slow and packaging checks.
 
-multiple_integrate(1 / (x**4 + 1), (x, -oo, oo))
-# pi/sqrt(2)
-```
-
-### Trigonometric and exponential transform-friendly cases
-
-```python
-from sympy import symbols, sin, cos, exp, pi, oo
-from multiple_integrate import multiple_integrate
-
-x, y = symbols("x y", real=True)
-
-multiple_integrate(sin(x) * sin(y), (x, 0, pi), (y, 0, pi))
-# 4
-
-multiple_integrate(cos(x + y), (x, 0, pi), (y, 0, pi))
-# -4
-
-multiple_integrate(exp(-(x + y)), (x, 0, oo), (y, 0, oo))
-# 1
-```
-
-### Level-set / layer-cake example
-
-One of the package strategies rewrites suitable integrals using level sets of an inner function. A simple example is
-
-```python
-from sympy import symbols, exp, oo
-from multiple_integrate import multiple_integrate
-
-x, y = symbols("x y", nonnegative=True)
-
-multiple_integrate(exp(-(x + y)), (x, 0, oo), (y, 0, oo))
-# 1
-```
-
-Here the inner function is `g(x, y) = x + y`. Its level sets in the first quadrant are line segments, so the integral can be reduced to a one-dimensional pushforward density instead of treated only as a plain iterated antiderivative.
-
----
-
-## Region model
-
-The solver normalizes input bounds into explicit region objects before applying structural shortcuts.
-
-Region support includes:
-
-- `BoxRegion` for product domains with independent bounds
-- `IteratedRegion` for general nested bounds
-- `SimplexRegion` for standard simplex-style regions
-- `AffineSimplexRegion` for affine images of standard simplices
-- `GraphRegion` for simple affine graph-bounded 2D regions
-- `DiskRegion` for centered or translated axis-aligned disks
-- `BallRegion` for centered or translated axis-aligned balls
-- `EllipsoidRegion` for centered or translated axis-aligned ellipsoids
-- `AnnulusRegion` for centered annuli
-- `SphericalShellRegion` for centered spherical shells
-- `UnionRegion` for finite disjoint unions of supported regions with matching ordered variables
-
-Region constructors validate structural invariants such as distinct SymPy variables, compatible dimensions, nonnegative radii, positive ellipsoid semi-axes, and consistent nested dependencies. `UnionRegion` has additive **disjoint-union** semantics: pieces must share the same ordered variables and be disjoint up to measure-zero boundaries. Obvious overlaps among supported concentric radial pieces are rejected; if symbolic overlap cannot be decided, callers remain responsible for the disjointness claim.
-
-Translated disks, balls, and axis-aligned ellipsoids are recognized directly from shifted Cartesian bounds. Their `center` coordinates are stored in the same order as `region.variables`, and polynomial/radial shortcuts operate relative to that center.
-
-This improves:
-
-- symmetry detection
-- exact Dirichlet / simplex evaluation
-- moment formulas
-- dependent-bound handling
-- safe order reversal for simple graph regions
-- polar /spherical / affine coordinate-change shortcuts
-- convergence-aware structured dispatch on several exact families
-
----
-
-## Main strategy families
-
-The solver uses a dispatcher with exact strategies and simplification passes such as:
-
-- constant and zero fast paths
-- separability detection
-- region-aware symmetry shortcuts
-- polynomial-in-one-variable reduction
-- moment-based evaluation on recognized families
-- Gaussian-family recognition
-- rational full-line recognition
-- trigonometric / exponential rewrites
-- level-set / layer-cake style reductions for suitable inner functions
-- graph-region order reversal for simple affine dependent bounds
-- exact symbolic fallback when no specialized strategy applies
-
----
-
-## Dependent bounds
-
-The package is not limited to product regions. It has **structured** support for some dependent-bound multiple integrals, especially:
-
-- standard simplex / triangle regions
-- affine simplex variants
-- simple affine graph regions
-- standard disk / ball / ellipsoid regions written in nested-bounds form
-- explicit annulus, spherical shell, and union regions
-
-However, it is still **not** a full symbolic region engine. In particular, it does **not** yet provide:
-
-- general geometric region rewriting
-- automatic order reversal for arbitrary dependent bounds
-- a full region algebra
-- unrestricted automatic polar/spherical coordinate changes
-- arbitrary semialgebraic cell decomposition
-
----
-
-## Testing
-
-Run the test suite with:
-
-```bash
-pytest -q
-```
-
-The tests cover:
-
-- region parsing and classification
-- symmetry behavior
-- box / simplex / disk / ball moments
-- radial-region shortcuts
-- graph-region reversal
-- singular-but-convergent cases
-- divergence checks
-- rational full-line integrals
-- representative supported families
-
----
-
-## Repository layout
-
-```text
-MultipleIntegrate/
-├── multiple_integrate/
-├── tests/
-├── docs/
-├── notebooks/
-├── pyproject.toml
-└── README.md
-```
-
----
-
-## Author
-
-**Bhuvanesh Bhatt**
-
----
-
-## License
-
-GPL-3.0-or-later
-
-
----
-
-## Limitations
-
-The package includes exact simplex / Dirichlet formulas and coordinate changes for selected disks, balls, shells, and ellipsoids, but it does **not** attempt completely general geometric rewriting or arbitrary symbolic substitutions. It is best viewed as a recognition-driven exact integrator for structured families.
+See the [release notes](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/CHANGELOG.md) for changes and the [limitations and known issues](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/docs/limitations.md) for unresolved cases. MultipleIntegrate is licensed under the GNU General Public License version 3 only (GPL-3.0-only). See [LICENSE](https://github.com/BhuvaneshBhatt/multiple_integrate/blob/main/LICENSE).

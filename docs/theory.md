@@ -1,198 +1,153 @@
-# Theory
+# Mathematical foundations
 
-This page summarizes the mathematical ideas behind the package.
+See the [method reference guide](method-references.md) for the identities, theorem sources,
+implementation map and attribution limits behind these methods.
 
-MultipleIntegrate combines several mathematical viewpoints:
+This doc page collects the identities and hypotheses used by MultipleIntegrate. Planner behavior is
+in [How the planner chooses](strategies.md), API contracts are in [Public API](api.md).
 
-- direct evaluation on standard regions
-- Dirichlet / Beta / Gamma exact formulas
-- coordinate changes
-- symmetry reductions
-- decomposition-based layer-cake style methods
-- fallback iterated integration
+## Iterated integrals and orientation
 
----
-
-## 1. Iterated integration and order conventions
-
-The public API follows SymPy's convention: ranges are given in **inner-first iterated order**.
-
-So
-
-```python
-multiple_integrate(expr, (y, 0, 1 - x), (x, 0, 1))
-```
-
-represents
+For nested ranges, MultipleIntegrate follows SymPy's inner-to-outer convention (not the structural outer-to-inner ordering used, for example, by Mathematica). A two-variable integral
 
 \[
-\int_0^1 \int_0^{1-x} \text{expr} \, dy \, dx.
+\int_a^b\int_{u(x)}^{v(x)} f(x,y)\,dy\,dx
 \]
 
-This is only a user-interface convention. Internally, standalone region recognition can inspect either structural orientation for pattern matching, while `multiple_integrate` keeps the supplied inner-first semantics. Geometric shortcuts preserve the proved orientation of explicit ranges rather than silently replacing an oriented integral by an unsigned volume.
+is written with the `y` range first. Bounds are oriented: reversing a finite bound changes the sign.
+Geometric volume formulas are therefore valid replacements only when the orientation implied by
+symbolic parameters is known.
 
----
+## Product separation
 
-## 2. Standard special-function families
-
-A large fraction of exact multiple integrals reduce to Gamma and Beta identities.
-
-### Gamma integral
+On a Cartesian product `A × B`, if the integrand factors as `f(x)g(y)`, Fubini/Tonelli conditions
+allow
 
 \[
-\Gamma(a) = \int_0^\infty x^{a-1} e^{-x} \, dx,
-\qquad \Re(a) > 0.
+\int_{A\times B} f(x)g(y)\,d(x,y)
+=\left(\int_A f(x)\,dx\right)\left(\int_B g(y)\,dy\right).
 \]
 
-### Beta integral
+If an integrand is independent of one coordinate, that coordinate contributes the corresponding
+region measure.
+
+## Simplex and Dirichlet integrals
+
+On the standard simplex
 
 \[
-B(a,b) = \int_0^1 x^{a-1}(1-x)^{b-1} \, dx
-= \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}.
+\Delta_n=\{x_i\ge0:\;x_1+\cdots+x_n\le1\},
 \]
 
-### Dirichlet simplex integral
-
-For suitable exponents,
+Dirichlet's formula gives
 
 \[
-\int_{\Delta_n}
- x_1^{a_1-1}\cdots x_n^{a_n-1}
- (1-x_1-\cdots-x_n)^{a_{n+1}-1} \, dx
+\int_{\Delta_n}\prod_{i=1}^n x_i^{\alpha_i}
+(1-\textstyle\sum_i x_i)^{\alpha_0}\,dx
 =
-\frac{\prod_{j=1}^{n+1}\Gamma(a_j)}{\Gamma(a_1+\cdots+a_{n+1})}.
+\frac{\prod_{i=0}^n\Gamma(\alpha_i+1)}
+{\Gamma(\sum_{i=0}^n\alpha_i+n+1)},
 \]
 
-This formula is a core exact formula used for simplex integrals.
+provided `Re(alpha_i) > -1` for every exponent. Polynomial simplex moments are the nonnegative
+integer special case.
 
----
+## Affine change of variables
 
-## 3. Region-driven exactness
-
-Many multiple integrals are easier to solve once the geometry is recognized.
-
-### Boxes
-
-Product regions support constant-volume extraction, inactive-dimension stripping, and straightforward factorization when the integrand separates.
-
-### Simplices
-
-Simplex geometry naturally leads to Dirichlet integrals, polynomial moments, and affine normalizations.
-
-### Disks and balls
-
-Circular and spherical regions naturally suggest polar and spherical coordinates, symmetry reductions, and radial or angular-factorizable decompositions.
-
-### Ellipsoids
-
-Affine normalization can reduce selected ellipsoid integrals to standard ball or disk integrals.
-
----
-
-## 4. Coordinate changes
-
-A change of variables rewrites
+For an invertible affine map `x = A u + b`,
 
 \[
-\int_R F(x) \, dx
+\int_R F(x)\,dx
+=|\det A|\int_{A^{-1}(R-b)}F(Au+b)\,du.
 \]
 
-as
+This identity underlies affine-simplex and ellipsoidal normalization. A valid symbolic use requires an invertible map, a correctly transformed domain, and the appropriate absolute Jacobian for
+ordinary measure.
+
+## Polar and spherical coordinates
+
+In two dimensions,
 
 \[
-\int_{T^{-1}(R)} F(T(u)) \, |\det DT(u)| \, du.
+x=r\cos\theta,\qquad y=r\sin\theta,\qquad dx\,dy=r\,dr\,d\theta.
 \]
 
-In the package this idea is implemented in curated, structured ways rather than as unrestricted symbolic inversion.
-
-### Polar coordinates
+In three dimensions,
 
 \[
-x = r\cos\theta,
-\qquad y = r\sin\theta,
-\qquad dx\,dy = r\,dr\,d\theta.
+x=\rho\sin\phi\cos\theta,\quad
+y=\rho\sin\phi\sin\theta,\quad
+z=\rho\cos\phi,
 \]
 
-### Spherical coordinates
+with volume element `rho**2 sin(phi) d rho d phi d theta`. In dimension `n`, radial measure contains
+the factor `r**(n-1)` times unit-sphere measure.
+
+## Spherical tensor moments
+
+Rotational invariance implies
 
 \[
-x = \rho\sin\phi\cos\theta,
-\quad y = \rho\sin\phi\sin\theta,
-\quad z = \rho\cos\phi,
-\quad dV = \rho^2\sin\phi\,d\rho\,d\phi\,d\theta.
+\int_{S^{n-1}}\omega_i\omega_j\,d\omega
+=\frac{|S^{n-1}|}{n}\delta_{ij}.
 \]
 
-Translated disks, balls, and ellipsoids include their stored centers in these maps. A coordinate change is considered successful only when the transformed integration actually evaluates; an unevaluated transformed `Integral` does not block later strategies.
+Higher even moments are sums over pairings of indices with the corresponding isotropic denominator
+`n(n+2)...`; odd moments vanish. These contraction identities avoid unnecessary coordinate
+expansion for polynomial angular factors.
 
----
+## Gaussian integrals
 
-## 5. Symmetry
-
-Symmetry can eliminate substantial work before any heavy symbolic manipulation.
-
-Examples include:
-
-- odd integrands over reflection-invariant domains
-- equal coordinate moments on isotropic regions
-- separation of angular and radial factors after a coordinate change
-
-This is especially important on disks, balls, Gaussian full-space integrals, and some box-type domains.
-
----
-
-## 6. Layer-cake and decomposition methods
-
-The package still uses the classical identity
+For real `a > 0`,
 
 \[
-\int_\Omega f(g(x))\,dx = \int f(y)\,\mu'(y)\,dy
+\int_{-\infty}^{\infty}e^{-a x^2}\,dx=\sqrt{\frac{\pi}{a}}.
 \]
 
-in selected situations, where
+For a real symmetric positive-definite matrix `A`,
 
 \[
-\mu(y) = \int_\Omega \mathbf{1}[g(x) \le y] \, dx.
+\int_{\mathbb R^n}e^{-x^T A x}\,dx
+=\frac{\pi^{n/2}}{\sqrt{\det A}}.
 \]
 
-This is useful for monotone, piecewise-monotone, separable, and selected non-polynomial cases. It complements region formulas, coordinate changes, and direct iterated integration.
+Positive definiteness is a convergence hypothesis, not just a simplification assumption.
 
----
+## Symmetry
 
-## 7. Convergence and assumptions
+If a domain is invariant under a reflection and the integrand is odd under the same reflection, the ordinary integral vanishes when it exists. For singular integrals, the cutoff prescription must
+preserve the symmetry before the same cancellation can be used.
 
-The package does **not** implement a complete general convergence theory for arbitrary symbolic multiple integrals.
+## Level-set reduction
 
-Assumptions may be supplied as ordinary SymPy relational conditions or ``Q`` predicates, for example:
+For suitable `g`, a co-area/layer-cake viewpoint rewrites an integral of `F(g(x))` in terms of the
+measure or density of level sets of `g`. In one transverse variable this reduces to an ordinary
+substitution; for regular hypersurfaces the local Jacobian contains `1/|partial_i g|` on a chart
+where `partial_i g != 0`.
 
-```python
-multiple_integrate(exp(-a*x), (x, 0, oo), assumptions={a > 0})
-multiple_integrate(expr, *ranges, assumptions={Q.positive(a), Q.integer(n)})
-```
+## Principal values
 
-These conditions are normalized to SymPy predicates and are used both by
-MultipleIntegrate's structured convergence checks and to refine results returned
-by SymPy. Contradictory assumptions are rejected.
+A one-dimensional Cauchy principal value around an interior singularity `c` uses a symmetric cutoff:
 
-The implementation performs **basic structured-path checks** in important situations such as:
+\[
+\operatorname{PV}\int_a^b f(x)\,dx
+=\lim_{\varepsilon\to0^+}
+\left(\int_a^{c-\varepsilon}f(x)\,dx+
+\int_{c+\varepsilon}^b f(x)\,dx\right).
+\]
 
-- Dirichlet/simplex exponent conditions
-- selected Gaussian positive-definiteness checks
-- selected safety checks before applying exact formulas or coordinate changes
+A geometric principal value replaces the interval cutoff by one shrinking centered geometric
+neighbourhood. A hypersurface PV uses one shared level-set cutoff `|g| > epsilon`. These are distinct
+mathematical prescriptions and can give different answers.
 
-So the correct statement is not "no convergence screening at all" but rather:
+## Hadamard finite part
 
-- structured families receive some safety checks
-- arbitrary fallback integrals still rely heavily on SymPy's behavior
+When a cutoff integral has negative powers or logarithms of `epsilon`, the Hadamard finite part is
+the coefficient of `epsilon**0 * log(epsilon)**0` after the divergent terms are separated. This
+requires an asymptotic expansion with enough information to identify the constant term.
 
----
+## Convergence and assumptions
 
-## 8. Why structure matters
-
-The package's central philosophy is that exact multiple integration is usually easiest when one recognizes hidden structure first:
-
-- geometric structure of the region
-- special-function structure of the integrand
-- symmetry
-- suitable coordinates
-
-That is why the package can often solve integrals that look complicated while still deferring difficult unstructured cases to SymPy.
+Exact formulas are valid only under their theorem hypotheses. Common conditions include positive
+Gaussian quadratic forms, endpoint exponents greater than `-1`, sufficient decay at infinity, and
+nonvanishing Jacobians or transverse derivatives. When parameters leave these conditions undecided, the natural mathematical result is parameter-stratified or conditional rather than a unqualified formula.

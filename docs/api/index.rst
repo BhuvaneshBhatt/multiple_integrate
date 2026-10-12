@@ -13,3 +13,5 @@ core integration data structures.
    public
    regions
    core
+   series
+   selected

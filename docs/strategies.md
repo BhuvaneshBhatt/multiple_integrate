@@ -1,37 +1,33 @@
-# Integration methods
+# How the planner chooses an integration method
 
-MultipleIntegrate uses a layered planner. Methods are selected from the mathematical structure of the region and integrand rather than from a fixed numbered sequence.
+See the [method reference guide](method-references.md) for the identities, theorem sources,
+implementation map and attribution limits behind these methods.
 
-## Region recognition
+The planner prefers the cheapest exact argument that is justified by the integrand, domain, and
+assumptions. It does not run every method and compare answers.
 
-Nested bounds are classified into boxes, graph regions, simplices, affine simplices, disks, annuli, balls, spherical shells, ellipsoids, or a general iterated region. Recognized geometry enables exact formulas that are unavailable to a purely syntactic iterated integrator.
+## Dispatch responsibilities
 
-## Structured exact formulas
+Explicit prescriptions dispatch first: Cauchy, geometric, hypersurface and Hadamard semantics have separate evaluators and retain the requested cutoff. Ordinary evaluation normalizes ranges and assumptions, recognizes immutable geometry through a bounded cache, and checks the result cache.
 
-Product regions support inactive-dimension elimination and product separation. Simplex and affine-simplex regions support Dirichlet and polynomial-moment formulas. Disks, balls, annuli, shells, and ellipsoids support selected volume, moment, radial, and transformed integrals.
+Constant volumes and proved polynomial-function moments, pole-free rational formulas, and narrow oscillatory rules precede expensive singularity queries. Structured geometry then supplies Cartesian, simplex, radial, symmetry and coordinate-change formulas. Product separability and inactive finite dimensions preserve whole-domain prerequisites. Coordinate-sum closed forms keep priority over multi-index series.
 
-## Symmetry and separability
+Finite-box polynomial phases can produce an exact uniformly convergent series. Remaining composition strategies use linear pushforwards, positive-definite quadratic maps, additive and monotone changes, then selected layer-cake reductions. General iterated SymPy integration follows the proved specialized routes. Inconclusive backend output is unknown.
 
-Reflection invariance can eliminate odd contributions after singularity safety checks. Symmetry is tested before coordinate transformations so a cheap exact cancellation is not replaced by a harder transformed integral. Product-separable integrands are reduced to independent one-dimensional integrals. Additively separable inner expressions can be treated through pushforward densities when their ranges are independent.
+Semialgebraic geometry is owned by the Semialg adapter. Native axis-wise and graph reductions can precede certified decomposition. `integrate_cells` builds an exact supported transition partition or validates caller-supplied cells; each child retains its measure, coverage and convergence claims. A partition alone does not prove every child integral.
 
-## Coordinate changes
+Certified infinite sums retain their summands during outer algebra simplification. Rewriting a hypergeometric coefficient into a slower numerical special function does not improve the integration strategy, and symbolic summation is not launched merely to simplify outer factors.
 
-Polar coordinates are used for disks and annuli, spherical coordinates for balls and shells, and affine normalization for affine simplices and ellipsoids. Translated disks, balls, and ellipsoids retain their centers in the coordinate map. A transformation is accepted only when the target ranges and Jacobian can be represented exactly, and a transformed result that still contains an unevaluated `Integral` is treated as an unsuccessful strategy so other methods can continue.
+## Why a strategy may be skipped
 
-For explicit symbolic ranges, geometric formulas are used only when range orientation can be proved under the active assumptions. This prevents unsigned geometric volume formulas from replacing oriented iterated integrals.
+A method can be inapplicable because orientation cannot be proved, assumptions are insufficient,
+a singularity invalidates a symmetry argument, a transformation leaves an unevaluated integral,
+or a configured complexity budget predicts expensive exact work. Use `integrate_result()`
+to inspect these decisions.
 
-## Composition and level-set methods
+For exact mathematical identities and hypotheses, see [Theory](theory.md). For a family-by-family
+support summary, see the [Capability matrix](capabilities.md).
 
-For an integrand expressible as `f(g(x))`, the internal composition analysis identifies the outer function and inner expression. Depending on the structure of `g`, the planner may use linear pushforward formulas, monotone substitutions, piecewise-monotone substitutions, polynomial level-set integration, or a general symbolic level-set density.
+## Geometry extension routing
 
-## Iterated fallback
-
-When no specialized method is justified, MultipleIntegrate evaluates the supplied inner-first ranges with SymPy. Specialized methods are conservative optimizations: an uncertain structural match should fall back rather than change the mathematical domain or return an unsupported closed form.
-
-## Boolean restrictions
-
-Boolean `Or` conditions are converted to a `UnionRegion` only when the resulting pieces can be proved pairwise disjoint. If disjointness is uncertain or branches overlap, the union shortcut is declined and the ordinary symbolic path handles the Boolean expression without double counting.
-
-## Bounded heuristic solving
-
-Critical-point searches are heuristic accelerators rather than correctness requirements. Candidate critical points are used only when their interval membership can be proved. Symbolic solves in this path use a POSIX timer when available; in execution contexts without a safe interval timer, the heuristic is skipped rather than allowed to run without a bound. Existing process timers are preserved.
+Certified polygonal domains with polynomial or affine-exponential densities, fixed-normal symbolic convex polygons on proved cells, and rational polynomial convex 3D polytopes can reduce to exact boundary flux before geometric decomposition. See [Polygon and polytope boundary reduction](boundary-reduction.md). Native symbolic boxes and affine cell maps precede globally certified polynomial graph strips. Cusp blowups check vertex and contact thresholds before angular symmetry. Finite mixed radial profiles can return exact convergent series. Shared product cutoffs retain source geometry and scale through affine or polynomial graph maps. Unknown signs or failed budgets decline; the caller can provide additional cells. These routes do not imply automatic CAD, general resolution of singularities, arbitrary polygon cutoffs or a global deadline for all upstream symbolic work.

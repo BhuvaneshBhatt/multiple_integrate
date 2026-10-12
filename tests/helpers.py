@@ -13,7 +13,7 @@ def sym_eq(result, expected, *, tol=1e-12):
     try:
         val = complex(diff.evalf(30))
         return abs(val) < tol
-    except Exception:
+    except (TypeError, ValueError, ArithmeticError, OverflowError):
         return False
 
 

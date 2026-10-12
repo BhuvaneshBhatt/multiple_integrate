@@ -1,7 +1,8 @@
 import sympy as sp
 from sympy import Rational, atan, exp, gamma, oo, pi, sqrt
 
-from multiple_integrate import BallRegion, multiple_integrate
+from multiple_integrate import integrate
+from multiple_integrate.region_types import BallRegion
 from tests.helpers import assert_eq, run_with_soft_budget
 
 
@@ -9,7 +10,7 @@ def test_transformed_linear_reduction_returns_prompt_unevaluated_integral():
     x1, x2 = sp.symbols("x1 x2", positive=True)
     expr = exp(-exp(x1 + x2))
     result, _ = run_with_soft_budget(
-        lambda: multiple_integrate(expr, (x1, 0, oo), (x2, 0, oo)),
+        lambda: integrate(expr, (x1, 0, oo), (x2, 0, oo)),
         4.0,
         label="transformed linear layer-cake reduction should not hang",
     )
@@ -21,7 +22,7 @@ def test_nested_quadratic_reference_example_has_soft_budget():
     x1, x2 = sp.symbols("x1 x2", real=True)
     expr = 1 / (1 + (x1**2 + 2 * x2**2 + 2 * (x1 + 2 * x2)) ** 2)
     result, _ = run_with_soft_budget(
-        lambda: multiple_integrate(expr, (x1, -oo, oo), (x2, -oo, oo)),
+        lambda: integrate(expr, (x1, -oo, oo), (x2, -oo, oo)),
         4.0,
         label="nested quadratic reference example",
     )
@@ -33,7 +34,7 @@ def test_superellipse_reference_example_has_soft_budget():
     x1, x2 = sp.symbols("x1 x2", real=True)
     expr = 1 / (1 + (x1**2 + x2**4) ** 3)
     result, _ = run_with_soft_budget(
-        lambda: multiple_integrate(expr, (x1, 0, oo), (x2, 0, oo)),
+        lambda: integrate(expr, (x1, 0, oo), (x2, 0, oo)),
         2.0,
         label="superellipse reference example",
     )
@@ -45,7 +46,7 @@ def test_notebook_rectangular_double_integral_has_soft_budget():
     x, y = sp.symbols("x y", positive=True)
     expr = x**2 * y / (x + y)
     result, _ = run_with_soft_budget(
-        lambda: multiple_integrate(expr, (x, 0, 3), (y, 1, 2)),
+        lambda: integrate(expr, (x, 0, 3), (y, 1, 2)),
         2.0,
         label="notebook rectangular double integral",
     )
@@ -65,7 +66,7 @@ def test_notebook_ball_moment_has_soft_budget():
         dimension=3,
     )
     result, _ = run_with_soft_budget(
-        lambda: multiple_integrate(x**2 + y**2 + z**2, region),
+        lambda: integrate(x**2 + y**2 + z**2, region),
         2.0,
         label="notebook ball moment integral",
     )

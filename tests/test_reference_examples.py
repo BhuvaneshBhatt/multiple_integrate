@@ -12,14 +12,12 @@ Covers:
   • Bounded quadratic-sum: exp(-(x1+x2)²) on [0,3]×[0,5]
 """
 
-import pytest
 import sympy as sp
 from sympy import (
     Integer,
     Rational,
     atan,
     exp,
-    expint,
     gamma,
     oo,
     pi,
@@ -28,7 +26,7 @@ from sympy import (
     symbols,
 )
 
-from multiple_integrate import multiple_integrate
+from multiple_integrate import IntegrationStatus, integrate, integrate_result
 from tests.helpers import assert_eq
 
 x1, x2, x3, x4, x5, x6 = symbols("x1 x2 x3 x4 x5 x6", real=True)
@@ -42,7 +40,7 @@ a1, a2, a3, a4, a5, a6 = symbols("a1 a2 a3 a4 a5 a6", real=True)
 # integrals exist but disagree.  The value depends on which variable is
 # integrated first (innermost).
 #
-# Convention: multiple_integrate(f, (x1,a,b), (x2,c,d)) integrates x1 first
+# Convention: integrate(f, (x1,a,b), (x2,c,d)) integrates x1 first
 # (innermost), then x2.
 #
 #   ∫_{x2=0}^{1} [∫_{x1=0}^{1} (x1²-x2²)/(x1²+x2²)² dx1] dx2 = -π/4
@@ -59,7 +57,7 @@ class TestFubiniViolation:
         Integrating x1 first (inner), then x2 gives -π/4.
         """
         expr = (x1**2 - x2**2) / (x1**2 + x2**2) ** 2
-        result = multiple_integrate(expr, (x1, 0, 1), (x2, 0, 1))
+        result = integrate(expr, (x1, 0, 1), (x2, 0, 1))
         assert_eq(result, -pi / 4, "Fubini violation: x1 inner")
 
     def test_fubini_violation_x2_inner(self):
@@ -67,14 +65,14 @@ class TestFubiniViolation:
         Integrating x2 first (inner), then x1 gives +π/4.
         """
         expr = (x1**2 - x2**2) / (x1**2 + x2**2) ** 2
-        result = multiple_integrate(expr, (x2, 0, 1), (x1, 0, 1))
+        result = integrate(expr, (x2, 0, 1), (x1, 0, 1))
         assert_eq(result, pi / 4, "Fubini violation: x2 inner")
 
     def test_fubini_violation_order_changes_sign(self):
         """Swapping integration order negates the result — Fubini failure."""
         expr = (x1**2 - x2**2) / (x1**2 + x2**2) ** 2
-        r1 = multiple_integrate(expr, (x1, 0, 1), (x2, 0, 1))
-        r2 = multiple_integrate(expr, (x2, 0, 1), (x1, 0, 1))
+        r1 = integrate(expr, (x1, 0, 1), (x2, 0, 1))
+        r2 = integrate(expr, (x2, 0, 1), (x1, 0, 1))
         assert sp.simplify(r1 + r2) == 0, "Orders should give negatives of each other"
 
 
@@ -93,7 +91,7 @@ class TestSuperellipseLayerCake:
         ∫∫_{[0,∞)²} 1/(1+(x1²+x2⁴)³) dx1 dx2
         = -π^(5/2)/(4·Γ(-1/4)·Γ(7/4))  ≈ 0.9708
         """
-        result = multiple_integrate(1 / (1 + (x1**2 + x2**4) ** 3), (x1, 0, oo), (x2, 0, oo))
+        result = integrate(1 / (1 + (x1**2 + x2**4) ** 3), (x1, 0, oo), (x2, 0, oo))
         expected = -(pi ** Rational(5, 2)) / (4 * gamma(Rational(-1, 4)) * gamma(Rational(7, 4)))
         assert abs(complex(result.evalf(20)).real - float(expected.evalf())) < 1e-9
 
@@ -102,7 +100,7 @@ class TestSuperellipseLayerCake:
         ∫∫_{[0,∞)²} exp(-(x1²+x2⁴)³) dx1 dx2
         = -(π^(3/2)·Γ(5/4))/(√2·Γ(-1/4)·Γ(7/4))  ≈ 0.7922
         """
-        result = multiple_integrate(exp(-((x1**2 + x2**4) ** 3)), (x1, 0, oo), (x2, 0, oo))
+        result = integrate(exp(-((x1**2 + x2**4) ** 3)), (x1, 0, oo), (x2, 0, oo))
         expected = -(pi ** Rational(3, 2) * gamma(Rational(5, 4))) / (
             sqrt(2) * gamma(Rational(-1, 4)) * gamma(Rational(7, 4))
         )
@@ -113,7 +111,7 @@ class TestSuperellipseLayerCake:
         ∫∫_{[0,∞)²} 1/(1+(x1²+x2³)³) dx1 dx2
         = π^(3/2)·Γ(1/3)/(18·sin(5π/18)·Γ(5/6))  ≈ 0.9584
         """
-        result = multiple_integrate(1 / (1 + (x1**2 + x2**3) ** 3), (x1, 0, oo), (x2, 0, oo))
+        result = integrate(1 / (1 + (x1**2 + x2**3) ** 3), (x1, 0, oo), (x2, 0, oo))
         expected = (
             pi ** Rational(3, 2)
             * gamma(Rational(1, 3))
@@ -126,7 +124,7 @@ class TestSuperellipseLayerCake:
         ∫∫_{[0,∞)²} exp(-(x1²+x2³)³) dx1 dx2
         = -(5·π^(3/2)·Γ(5/18))/(18·√3·Γ(-1/3)·Γ(11/6))
         """
-        result = multiple_integrate(exp(-((x1**2 + x2**3) ** 3)), (x1, 0, oo), (x2, 0, oo))
+        result = integrate(exp(-((x1**2 + x2**3) ** 3)), (x1, 0, oo), (x2, 0, oo))
         expected = -(5 * pi ** Rational(3, 2) * gamma(Rational(5, 18))) / (
             18 * sqrt(3) * gamma(Rational(-1, 3)) * gamma(Rational(11, 6))
         )
@@ -136,7 +134,7 @@ class TestSuperellipseLayerCake:
         """
         exp((x1²+x2⁴)³) over [0,∞)² diverges → returns oo.
         """
-        result = multiple_integrate(exp((x1**2 + x2**4) ** 3), (x1, 0, oo), (x2, 0, oo))
+        result = integrate(exp((x1**2 + x2**4) ** 3), (x1, 0, oo), (x2, 0, oo))
         assert (
             result == oo
             or result == sp.zoo
@@ -158,7 +156,7 @@ class TestNestedQuadraticComposition:
         ∫∫_ℝ² 1/(1+(x1²+2x2²+2(x1+2x2))²) = π(π/2+arctan(3))/√2
         """
         expr = 1 / (1 + (x1**2 + 2 * x2**2 + 2 * (x1 + 2 * x2)) ** 2)
-        result = multiple_integrate(expr, (x1, -oo, oo), (x2, -oo, oo))
+        result = integrate(expr, (x1, -oo, oo), (x2, -oo, oo))
         expected = pi * (pi / 2 + atan(Integer(3))) / sqrt(2)
         assert_eq(result, expected, "2D nested quadratic composition")
 
@@ -176,7 +174,7 @@ class TestNestedQuadraticComposition:
             + 5 * x5**2
             + 2 * (x1 + 2 * x2 + 3 * x3 + 4 * x4 + 5 * x5)
         )
-        result = multiple_integrate(
+        result = integrate(
             g ** (-4),
             (x1, -oo, oo),
             (x2, -oo, oo),
@@ -201,7 +199,7 @@ class TestSymbolicShiftedGaussians:
         ∫∫_ℝ² exp(-s1(x1-a1)²-s2(x2-a2)²) = π/√(s1·s2)
         """
         integrand = exp(-s1 * (x1 - a1) ** 2 - s2 * (x2 - a2) ** 2)
-        result = multiple_integrate(integrand, (x1, -oo, oo), (x2, -oo, oo))
+        result = integrate(integrand, (x1, -oo, oo), (x2, -oo, oo))
         assert_eq(result, pi / sqrt(s1 * s2), "2D shifted Gaussian")
 
     def test_shifted_gaussian_6d_symbolic(self):
@@ -216,7 +214,7 @@ class TestSymbolicShiftedGaussians:
             - s5 * (x5 - a5) ** 2
             - s6 * (x6 - a6) ** 2
         )
-        result = multiple_integrate(
+        result = integrate(
             integrand,
             (x1, -oo, oo),
             (x2, -oo, oo),
@@ -244,12 +242,18 @@ class TestMiscReferenceIntegrals:
 
         The linear pushforward method detects g_work = 1+x1+x2 with k=3.
         """
-        result = multiple_integrate(exp(-((1 + x1 + x2) ** 3)), (x1, 0, oo), (x2, 0, oo))
-        expected_num = float((expint(Rational(1, 3), 1) - expint(Rational(2, 3), 1)).evalf()) / 3
-        if isinstance(result, sp.Integral):
-            pytest.skip("Unevaluated integral — acceptable")
-        assert abs(float(result.evalf()) - expected_num) < 1e-9, (
-            f"Numerical mismatch: {float(result.evalf())} vs {expected_num}"
+        result = integrate_result(exp(-((1 + x1 + x2) ** 3)), (x1, 0, oo), (x2, 0, oo))
+        assert result.status is IntegrationStatus.UNKNOWN
+        integrals = tuple(result.value.atoms(sp.Integral))
+        assert len(integrals) == 1
+        unresolved = integrals[0]
+        ((parameter, lower, upper),) = unresolved.limits
+        assert (lower, upper) == (0, oo)
+        prefactor = sp.simplify(result.value / unresolved)
+        assert parameter not in prefactor.free_symbols
+        assert (
+            sp.simplify(prefactor * unresolved.function - parameter * exp(-((parameter + 1) ** 3)))
+            == 0
         )
 
     def test_exp_quadratic_sum_bounded(self):
@@ -258,8 +262,7 @@ class TestMiscReferenceIntegrals:
 
         Exact closed form involves erf terms with large arguments.
         """
-        result = multiple_integrate(exp(-((x1 + x2) ** 2)), (x1, 0, 3), (x2, 0, 5))
-        if isinstance(result, sp.Integral):
-            pytest.skip("Unevaluated integral — acceptable")
+        result = integrate(exp(-((x1 + x2) ** 2)), (x1, 0, 3), (x2, 0, 5))
+        assert not isinstance(result, sp.Integral)
         val = float(result.evalf())
         assert abs(val - 0.4999970266775357) < 1e-8, f"Numerical mismatch: {val}"

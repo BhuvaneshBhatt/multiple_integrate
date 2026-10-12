@@ -2,6 +2,9 @@ import pytest
 import sympy as sp
 
 from multiple_integrate import (
+    integrate,
+)
+from multiple_integrate.region_types import (
     AffineSimplexRegion,
     AnnulusRegion,
     BallRegion,
@@ -14,7 +17,6 @@ from multiple_integrate import (
     SimplexRegion,
     SphericalShellRegion,
     UnionRegion,
-    multiple_integrate,
 )
 
 x, y, z = sp.symbols("x y z", real=True)
@@ -185,9 +187,6 @@ def test_region_matrix_rejects_nonradial_ellipsoid_integrand():
     assert region.radial_integral(sp.exp(x * y) - 1) is None
 
 
-def test_region_methods_are_used_by_multiple_integrate():
+def test_region_methods_are_used_by_integrate():
     shell = SphericalShellRegion(variables_nd=(x, y, z), inner_radius=1, outer_radius=2)
-    assert (
-        sp.simplify(multiple_integrate(x**2 + y**2 + z**2, shell) - sp.Rational(124, 5) * sp.pi)
-        == 0
-    )
+    assert sp.simplify(integrate(x**2 + y**2 + z**2, shell) - sp.Rational(124, 5) * sp.pi) == 0

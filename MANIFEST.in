@@ -1,0 +1,9 @@
+include README.md CHANGELOG.md LICENSE pyproject.toml
+recursive-include src/multiple_integrate *.py
+recursive-include tests *.py
+recursive-include docs *
+recursive-include notebooks *.ipynb
+
+recursive-include tools *.py
+
+recursive-include examples *.py

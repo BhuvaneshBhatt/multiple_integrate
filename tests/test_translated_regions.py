@@ -1,12 +1,10 @@
 import sympy as sp
 
 from multiple_integrate import (
-    BallRegion,
-    DiskRegion,
-    EllipsoidRegion,
-    multiple_integrate,
+    integrate,
     region_from_ranges,
 )
+from multiple_integrate.region_types import BallRegion, DiskRegion, EllipsoidRegion
 
 
 def test_translated_disk_is_classified_and_integrated():
@@ -21,7 +19,7 @@ def test_translated_disk_is_classified_and_integrated():
     assert region.radius == 3
     assert sp.simplify(region.constant_volume() - 9 * sp.pi) == 0
     shifted_r2 = (x - 1) ** 2 + (y + 2) ** 2
-    assert sp.simplify(multiple_integrate(shifted_r2, *ranges) - sp.Rational(81, 2) * sp.pi) == 0
+    assert sp.simplify(integrate(shifted_r2, *ranges) - sp.Rational(81, 2) * sp.pi) == 0
 
 
 def test_translated_ball_is_classified_and_integrated():
@@ -42,7 +40,7 @@ def test_translated_ball_is_classified_and_integrated():
     assert sp.simplify(region.constant_volume() - sp.Rational(32, 3) * sp.pi) == 0
     shifted_r2 = (x - 1) ** 2 + (y + 2) ** 2 + (z - 3) ** 2
     assert sp.simplify(region.radial_integral(shifted_r2) - sp.Rational(128, 5) * sp.pi) == 0
-    assert sp.simplify(multiple_integrate(shifted_r2, *ranges) - sp.Rational(128, 5) * sp.pi) == 0
+    assert sp.simplify(integrate(shifted_r2, *ranges) - sp.Rational(128, 5) * sp.pi) == 0
 
 
 def test_translated_ellipsoid_is_classified_and_integrated():
@@ -63,8 +61,8 @@ def test_translated_ellipsoid_is_classified_and_integrated():
     assert sp.simplify(region.constant_volume() - 6 * sp.pi) == 0
     normalized_r2 = (x - 1) ** 2 / 4 + (y + 2) ** 2 / 9
     assert sp.simplify(region.radial_integral(normalized_r2) - 3 * sp.pi) == 0
-    assert sp.simplify(multiple_integrate(normalized_r2, *ranges) - 3 * sp.pi) == 0
-    assert sp.simplify(multiple_integrate(1, *ranges) - 6 * sp.pi) == 0
+    assert sp.simplify(integrate(normalized_r2, *ranges) - 3 * sp.pi) == 0
+    assert sp.simplify(integrate(1, *ranges) - 6 * sp.pi) == 0
 
 
 def test_direct_translated_disk_polynomial_moment_uses_center():

@@ -1,0 +1,344 @@
+{
+  "multiple_integrate.__init__": {
+    "infrastructure": "public package API"
+  },
+  "multiple_integrate.adapters": {
+    "infrastructure": "cross-package adapters"
+  },
+  "multiple_integrate.adapters.asymptotic": {
+    "methods": [
+      "Hadamard finite parts, rational finite parts at infinity"
+    ]
+  },
+  "multiple_integrate.adapters.funcprops": {
+    "infrastructure": "function-property reasoning adapter"
+  },
+  "multiple_integrate.adapters.semialg": {
+    "methods": [
+      "Intrinsic point, curve and surface measure"
+    ]
+  },
+  "multiple_integrate.affine_cell_geometry": {
+    "methods": [
+      "Graph strips, affine cells and quadratic parameter geometry"
+    ]
+  },
+  "multiple_integrate.analytic_region_formulas": {
+    "methods": [
+      "Finite polynomial box moments",
+      "Simplex and affine-simplex moments",
+      "Balls, shells, ellipsoids and spherical polynomial moments"
+    ]
+  },
+  "multiple_integrate.analytic_strategies": {
+    "infrastructure": "analytic strategy import facade"
+  },
+  "multiple_integrate.anisotropic": {
+    "methods": [
+      "Weighted even-power and superellipse moments"
+    ]
+  },
+  "multiple_integrate.api": {
+    "infrastructure": "curated public API"
+  },
+  "multiple_integrate.api.integration": {
+    "infrastructure": "public integration orchestration"
+  },
+  "multiple_integrate.assumptions": {
+    "infrastructure": "assumption normalization and refinement"
+  },
+  "multiple_integrate.cauchy_principal_value": {
+    "methods": [
+      "Cauchy, geometric and hypersurface principal values"
+    ]
+  },
+  "multiple_integrate.cell_graphs": {
+    "methods": [
+      "Graph strips, affine cells and quadratic parameter geometry"
+    ]
+  },
+  "multiple_integrate.cell_proofs": {
+    "methods": [
+      "Automatic transition cells and caller-supplied cells",
+      "Bernstein interval positivity certificates"
+    ]
+  },
+  "multiple_integrate.clipped_quadratic": {
+    "methods": [
+      "Clipped polygons, parallel quadratic clips and angular sectors"
+    ]
+  },
+  "multiple_integrate.conditional": {
+    "infrastructure": "parameter-conditioned result normalization"
+  },
+  "multiple_integrate.contact_charts": {
+    "methods": [
+      "Endpoint vanishing, cusp horns and logarithmic tangent orders"
+    ]
+  },
+  "multiple_integrate.convergence": {
+    "methods": [
+      "Beta, Mellin and rational power families"
+    ]
+  },
+  "multiple_integrate.convergence_comparison": {
+    "methods": [
+      "Compact continuity, products, sums and comparison proofs"
+    ]
+  },
+  "multiple_integrate.convergence_evidence": {
+    "methods": [
+      "Compact continuity, products, sums and comparison proofs"
+    ]
+  },
+  "multiple_integrate.core": {
+    "methods": [
+      "Iterated integration, product separation and inactive coordinates",
+      "Reflection cancellation",
+      "Fallback symbolic integration"
+    ]
+  },
+  "multiple_integrate.cusp_horns": {
+    "methods": [
+      "Endpoint vanishing, cusp horns and logarithmic tangent orders"
+    ]
+  },
+  "multiple_integrate.entire_box_series": {
+    "methods": [
+      "Uniform entire-box series and bounded Taylor evaluation"
+    ]
+  },
+  "multiple_integrate.fast_rules": {
+    "methods": [
+      "Finite polynomial box moments",
+      "Polynomial\u2013exponential and polynomial\u2013trigonometric recurrences",
+      "Polynomial Gaussian recurrences and shifted/truncated moments",
+      "Laplace, stretched-exponential, endpoint and Laurent moments",
+      "Pole-free linear/quadratic and selected quartic rational formulas",
+      "Reciprocal-phase and periodic trigonometric tails"
+    ]
+  },
+  "multiple_integrate.geometric_principal_value": {
+    "methods": [
+      "Cauchy, geometric and hypersurface principal values"
+    ]
+  },
+  "multiple_integrate.hadamard": {
+    "methods": [
+      "Hadamard finite parts, rational finite parts at infinity"
+    ]
+  },
+  "multiple_integrate.hypersurface_atlas": {
+    "methods": [
+      "Cauchy, geometric and hypersurface principal values"
+    ]
+  },
+  "multiple_integrate.hypersurface_principal_value": {
+    "methods": [
+      "Cauchy, geometric and hypersurface principal values"
+    ]
+  },
+  "multiple_integrate.isolated_queries": {
+    "infrastructure": "opt-in per-query isolated execution deadlines"
+  },
+  "multiple_integrate.layer_cake_strategies": {
+    "methods": [
+      "Weighted even-power and superellipse moments",
+      "Layer-cake and level-set integration"
+    ]
+  },
+  "multiple_integrate.nonseparable_improper": {
+    "methods": [
+      "Nonseparable full-space shear profiles"
+    ]
+  },
+  "multiple_integrate.numerical_verification": {
+    "methods": [
+      "Numerical consistency checks"
+    ]
+  },
+  "multiple_integrate.ownership": {
+    "infrastructure": "architectural ownership manifest"
+  },
+  "multiple_integrate.parameter_cells": {
+    "methods": [
+      "Automatic transition cells and caller-supplied cells"
+    ]
+  },
+  "multiple_integrate.planner": {
+    "infrastructure": "strategy planning provenance and ownership registry"
+  },
+  "multiple_integrate.policy": {
+    "infrastructure": "strategy budgets and deterministic complexity guards"
+  },
+  "multiple_integrate.polygon_moments": {
+    "methods": [
+      "Clipped polygons, parallel quadratic clips and angular sectors"
+    ]
+  },
+  "multiple_integrate.principal_value": {
+    "infrastructure": "principal-value prescription import surface"
+  },
+  "multiple_integrate.principal_value_prescriptions": {
+    "infrastructure": "principal-value prescription value types"
+  },
+  "multiple_integrate.pushforward_strategies": {
+    "methods": [
+      "Layer-cake and level-set integration",
+      "Linear pushforwards, monotone and piecewise changes"
+    ]
+  },
+  "multiple_integrate.quadratic_cell_geometry": {
+    "methods": [
+      "Graph strips, affine cells and quadratic parameter geometry"
+    ]
+  },
+  "multiple_integrate.quadratic_gaussian": {
+    "methods": [
+      "Polynomial Gaussian recurrences and shifted/truncated moments",
+      "Full-space quadratic Gaussian and halfspace reductions",
+      "Reflection cancellation"
+    ]
+  },
+  "multiple_integrate.quadratic_radial": {
+    "methods": [
+      "Balls, shells, ellipsoids and spherical polynomial moments",
+      "Mixed radial profiles and half-integer moments"
+    ]
+  },
+  "multiple_integrate.quadratic_sectors": {
+    "methods": [
+      "Clipped polygons, parallel quadratic clips and angular sectors"
+    ]
+  },
+  "multiple_integrate.radial_parametrization": {
+    "methods": [
+      "Intrinsic point, curve and surface measure"
+    ]
+  },
+  "multiple_integrate.rational_cutoff": {
+    "methods": [
+      "Pole-free linear/quadratic and selected quartic rational formulas",
+      "Hadamard finite parts, rational finite parts at infinity"
+    ]
+  },
+  "multiple_integrate.recognition": {
+    "infrastructure": "integrand and range structural recognition"
+  },
+  "multiple_integrate.region_formulas": {
+    "methods": [
+      "Boolean indicators and certified region restrictions"
+    ]
+  },
+  "multiple_integrate.region_recognition": {
+    "infrastructure": "structured region recognition"
+  },
+  "multiple_integrate.region_strategies": {
+    "methods": [
+      "Simplex and affine-simplex moments"
+    ]
+  },
+  "multiple_integrate.region_types": {
+    "methods": [
+      "Finite polynomial box moments"
+    ]
+  },
+  "multiple_integrate.regions": {
+    "methods": [
+      "Boolean indicators and certified region restrictions"
+    ]
+  },
+  "multiple_integrate.regular_density": {
+    "methods": [
+      "Shared product cutoffs, affine/graph intersections and tangent regulators"
+    ]
+  },
+  "multiple_integrate.regularization": {
+    "methods": [
+      "Hadamard finite parts, rational finite parts at infinity"
+    ]
+  },
+  "multiple_integrate.results": {
+    "infrastructure": "structured integration result semantics"
+  },
+  "multiple_integrate.selected_families": {
+    "methods": [
+      "Beta, Mellin and rational power families",
+      "Laplace, stretched-exponential, endpoint and Laurent moments"
+    ]
+  },
+  "multiple_integrate.semialg_geometry": {
+    "methods": [
+      "Intrinsic point, curve and surface measure"
+    ]
+  },
+  "multiple_integrate.separable_strategies": {
+    "methods": [
+      "Iterated integration, product separation and inactive coordinates"
+    ]
+  },
+  "multiple_integrate.series_evaluation": {
+    "methods": [
+      "Uniform entire-box series and bounded Taylor evaluation"
+    ]
+  },
+  "multiple_integrate.singular_geometry": {
+    "methods": [
+      "Shared product cutoffs, affine/graph intersections and tangent regulators"
+    ]
+  },
+  "multiple_integrate.singular_maps": {
+    "methods": [
+      "Shared product cutoffs, affine/graph intersections and tangent regulators"
+    ]
+  },
+  "multiple_integrate.singularities": {
+    "methods": [
+      "Fallback symbolic integration"
+    ]
+  },
+  "multiple_integrate.sphere_integrals": {
+    "methods": [
+      "Balls, shells, ellipsoids and spherical polynomial moments"
+    ]
+  },
+  "multiple_integrate.strategy_common": {
+    "infrastructure": "shared exact strategy primitives"
+  },
+  "multiple_integrate.symbolic_geometry": {
+    "methods": [
+      "Graph strips, affine cells and quadratic parameter geometry"
+    ]
+  },
+  "multiple_integrate.tangent_cutoff": {
+    "methods": [
+      "Shared product cutoffs, affine/graph intersections and tangent regulators"
+    ]
+  },
+  "multiple_integrate.transforms": {
+    "methods": [
+      "Linear pushforwards, monotone and piecewise changes"
+    ]
+  },
+  "multiple_integrate.transition_cells": {
+    "methods": [
+      "Automatic transition cells and caller-supplied cells"
+    ]
+  },
+  "multiple_integrate.triangular_intersections": {
+    "methods": [
+      "Shared product cutoffs, affine/graph intersections and tangent regulators"
+    ]
+  },
+  "multiple_integrate.boundary_reduction": {
+    "methods": [
+      "Polynomial boundary flux on polygons and 3D polytopes",
+      "Affine exponential boundary flux"
+    ]
+  },
+  "multiple_integrate.coarea": {
+    "methods": [
+      "Verified affine, radial and certified-chart coarea reductions"
+    ]
+  }
+}

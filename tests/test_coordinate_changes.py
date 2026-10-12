@@ -1,6 +1,6 @@
 import sympy as sp
 
-from multiple_integrate import multiple_integrate
+from multiple_integrate import integrate
 
 
 def _assert_eq(expr, expected):
@@ -10,7 +10,7 @@ def _assert_eq(expr, expected):
 def test_disk_polar_nonradial_structured_case():
     x, y = sp.symbols("x y", real=True)
     expr = x**2 * y**2 / sp.sqrt(1 - x**2 - y**2)
-    result = multiple_integrate(
+    result = integrate(
         expr,
         (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)),
         (x, -1, 1),
@@ -21,7 +21,7 @@ def test_disk_polar_nonradial_structured_case():
 def test_ball_spherical_nonradial_structured_case():
     x, y, z = sp.symbols("x y z", real=True)
     expr = x**2 * y**2 * z**2
-    result = multiple_integrate(
+    result = integrate(
         expr,
         (z, -sp.sqrt(1 - x**2 - y**2), sp.sqrt(1 - x**2 - y**2)),
         (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)),
@@ -34,7 +34,7 @@ def test_ball_spherical_nonradial_structured_case():
 def test_ellipsoid_affine_change_of_variables():
     x, y = sp.symbols("x y", real=True)
     expr = x**2 * y**2
-    result = multiple_integrate(
+    result = integrate(
         expr,
         (y, -3 * sp.sqrt(1 - x**2 / 4), 3 * sp.sqrt(1 - x**2 / 4)),
         (x, -2, 2),
@@ -46,7 +46,7 @@ def test_ellipsoid_affine_change_of_variables():
 def test_quadratic_gaussian_formula_with_linear_term():
     x, y = sp.symbols("x y", real=True)
     expr = sp.exp(-(2 * x**2 + 2 * x * y + 3 * y**2) + x - 4 * y + 5)
-    result = multiple_integrate(expr, (y, -sp.oo, sp.oo), (x, -sp.oo, sp.oo))
+    result = integrate(expr, (y, -sp.oo, sp.oo), (x, -sp.oo, sp.oo))
 
     A = sp.Matrix([[2, 1], [1, 3]])
     b = sp.Matrix([1, -4])

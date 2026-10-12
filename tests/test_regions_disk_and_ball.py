@@ -1,6 +1,7 @@
 import sympy as sp
 
-from multiple_integrate import BallRegion, DiskRegion, multiple_integrate, region_from_ranges
+from multiple_integrate import integrate, region_from_ranges
+from multiple_integrate.region_types import BallRegion, DiskRegion
 from tests.helpers import assert_eq
 
 
@@ -13,13 +14,13 @@ def test_disk_region_recognition():
 
 def test_disk_polynomial_moment():
     x, y = sp.symbols("x y", real=True)
-    result = multiple_integrate(x**2, (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)), (x, -1, 1))
+    result = integrate(x**2, (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)), (x, -1, 1))
     assert_eq(result, sp.pi / 4, "disk x^2 moment")
 
 
 def test_disk_radial_integral():
     x, y = sp.symbols("x y", real=True)
-    result = multiple_integrate(
+    result = integrate(
         sp.exp(-(x**2 + y**2)), (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)), (x, -1, 1)
     )
     assert_eq(result, sp.pi * (1 - sp.exp(-1)), "radial disk integral")
@@ -40,7 +41,7 @@ def test_ball_region_recognition():
 
 def test_ball_polynomial_moment():
     x, y, z = sp.symbols("x y z", real=True)
-    result = multiple_integrate(
+    result = integrate(
         x**2,
         (z, -sp.sqrt(1 - x**2 - y**2), sp.sqrt(1 - x**2 - y**2)),
         (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)),
@@ -51,7 +52,7 @@ def test_ball_polynomial_moment():
 
 def test_ball_radial_integral():
     x, y, z = sp.symbols("x y z", real=True)
-    result = multiple_integrate(
+    result = integrate(
         sp.exp(-(x**2 + y**2 + z**2)),
         (z, -sp.sqrt(1 - x**2 - y**2), sp.sqrt(1 - x**2 - y**2)),
         (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)),

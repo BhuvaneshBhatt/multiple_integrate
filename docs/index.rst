@@ -1,20 +1,14 @@
 MultipleIntegrate
 =================
 
-**MultipleIntegrate** is a symbolic multiple-integration library built on SymPy.
-It combines ordinary iterated integration with recognition of structured
-geometric regions, exact region formulas, symmetry, coordinate transformations,
-and specialized integration strategies.
+MultipleIntegrate evaluates definite multiple integrals with SymPy, proved
+geometric reductions, exact moment rules and selected regularization prescriptions.
 
-The documentation is organized in four layers:
-
-1. :doc:`quickstart` — a short path from installation to useful integrals.
-2. :doc:`concepts/ranges-and-regions` — how nested ranges encode iterated
-   integrals and geometric regions.
-3. :doc:`examples/regions` — checked examples for rectangles, graph regions,
-   disks, balls, ellipsoids, and affine simplices.
-4. :doc:`api/index` — API documentation generated from the package's source
-   docstrings.
+Start with installation and the quick start. Use the domain guides to specify
+regions and parameter cells, and the result guides to interpret convergence,
+coverage and unresolved outcomes. The mathematical family guides give formulas
+and prerequisites; the API reference provides signatures. Contributor material
+is collected at the end.
 
 .. toctree::
    :maxdepth: 2
@@ -25,12 +19,47 @@ The documentation is organized in four layers:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Concepts
+   :caption: Domains and parameter families
 
    concepts/ranges-and-regions
-   theory
-   strategies
+   concepts/measure-and-dimension
+   supported-regions
    decomposition
+   parameterized-integration
+   geometry/parameter-geometry
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Results, convergence and regularization
+
+   structured-results
+   certification
+   scoped-convergence
+   regularization
+   worked-failures
+   concepts/sampling
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Exact methods and mathematical families
+
+   theory
+   method-references
+   method-examples
+   strategies
+   performance-methods
+   boundary-reduction
+   coarea
+   selected-symbolic-families
+   proved-families
+   series-evaluation
+   nonseparable-improper
+   geometry/cusp-proofs
+   geometry/radial-series
+   geometry/clipped-cutoffs
+   laurent-clips-and-tangencies
+   sectors-and-contact-charts
+   nonlinear-moments-and-singularities
 
 .. toctree::
    :maxdepth: 2
@@ -38,16 +67,28 @@ The documentation is organized in four layers:
 
    examples/regions
    examples
+   geometry-casebook
 
 .. toctree::
    :maxdepth: 2
-   :caption: Reference
+   :caption: Capabilities and limits
 
-   api/index
+   capabilities
+   limitations
+   integration-extensions
+   geometry-extensions
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Project
+   :maxdepth: 2
+   :caption: API reference
 
+   api/index
+   api
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contributor guides
+
+   architecture/semialg-integration
    testing
    contributing

@@ -1,13 +1,15 @@
 import sympy as sp
 
 from multiple_integrate import (
+    region_from_ranges,
+)
+from multiple_integrate.region_types import (
     BallRegion,
     BoxRegion,
     DiskRegion,
     GraphRegion,
     IteratedRegion,
     SimplexRegion,
-    region_from_ranges,
 )
 
 

@@ -1,5 +1,8 @@
 # Integrand composition analysis
 
+See the [method reference guide](method-references.md) for the identities, theorem sources,
+implementation map and attribution limits behind these methods.
+
 MultipleIntegrate analyzes some integrands as a composition
 
 $$

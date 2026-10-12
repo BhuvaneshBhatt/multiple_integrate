@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 project = "MultipleIntegrate"
 author = "Bhuvanesh Bhatt"
 copyright = "2026, Bhuvanesh Bhatt"
@@ -47,3 +49,7 @@ myst_enable_extensions = [
     "dollarmath",
     "colon_fence",
 ]
+
+# Allow reproducible offline builds without remote inventory downloads.
+if os.environ.get("MI_DOCS_OFFLINE") == "1":
+    intersphinx_mapping = {}

@@ -1,12 +1,9 @@
 import sympy as sp
 
 from multiple_integrate import (
-    BallRegion,
-    DiskRegion,
-    GraphRegion,
-    SimplexRegion,
     region_from_ranges,
 )
+from multiple_integrate.region_types import BallRegion, DiskRegion, GraphRegion, SimplexRegion
 
 
 def test_region_from_ranges_uses_sympy_inner_first_simplex():

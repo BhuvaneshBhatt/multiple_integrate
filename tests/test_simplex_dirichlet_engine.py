@@ -1,12 +1,12 @@
 import sympy as sp
 
-from multiple_integrate import multiple_integrate
+from multiple_integrate import integrate
 
 
 def test_simplex_dirichlet_half_integer_exact():
     x, y, z = sp.symbols("x y z", positive=True)
     expr = sp.sqrt(x) * y ** sp.Rational(3, 2) * sp.sqrt(z) * sp.sqrt(1 - x - y - z)
-    result = multiple_integrate(
+    result = integrate(
         expr,
         (z, 0, 1 - x - y),
         (y, 0, 1 - x),
@@ -25,7 +25,7 @@ def test_simplex_dirichlet_half_integer_exact():
 def test_simplex_inverse_square_root_exact():
     x, y, z = sp.symbols("x y z", positive=True)
     expr = 1 / sp.sqrt(x * y * z * (1 - x - y - z))
-    result = multiple_integrate(
+    result = integrate(
         expr,
         (z, 0, 1 - x - y),
         (y, 0, 1 - x),
@@ -43,7 +43,7 @@ def test_four_simplex_dirichlet_fractional_exact():
         * w ** sp.Rational(1, 4)
         * (1 - x - y - z - w) ** sp.Rational(3, 2)
     )
-    result = multiple_integrate(
+    result = integrate(
         expr,
         (w, 0, 1 - x - y - z),
         (z, 0, 1 - x - y),

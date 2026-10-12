@@ -1,6 +1,7 @@
 import sympy as sp
 
-from multiple_integrate import BoxRegion, IteratedRegion, SimplexRegion, region_from_ranges
+from multiple_integrate import region_from_ranges
+from multiple_integrate.region_types import BoxRegion, IteratedRegion, SimplexRegion
 
 
 def test_box_region_recognition():

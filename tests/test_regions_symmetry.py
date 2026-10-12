@@ -1,13 +1,10 @@
 import sympy as sp
 
 from multiple_integrate import (
-    BallRegion,
-    BoxRegion,
-    DiskRegion,
-    SimplexRegion,
-    multiple_integrate,
+    integrate,
     region_from_ranges,
 )
+from multiple_integrate.region_types import BallRegion, BoxRegion, DiskRegion, SimplexRegion
 from tests.helpers import assert_eq
 
 
@@ -32,7 +29,7 @@ def test_disk_region_recognized_and_odd_integral_vanishes():
     x, y = sp.symbols("x y", real=True)
     region = region_from_ranges([(y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)), (x, -1, 1)])
     assert isinstance(region, DiskRegion)
-    result = multiple_integrate(x, (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)), (x, -1, 1))
+    result = integrate(x, (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)), (x, -1, 1))
     assert_eq(result, 0, "disk odd integral")
 
 
@@ -46,7 +43,7 @@ def test_ball_region_recognized_and_odd_integral_vanishes():
         ]
     )
     assert isinstance(region, BallRegion)
-    result = multiple_integrate(
+    result = integrate(
         x,
         (z, -sp.sqrt(1 - x**2 - y**2), sp.sqrt(1 - x**2 - y**2)),
         (y, -sp.sqrt(1 - x**2), sp.sqrt(1 - x**2)),
